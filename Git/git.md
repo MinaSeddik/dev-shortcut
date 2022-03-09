@@ -66,6 +66,7 @@ git log --oneline
 ## <a name='git_reset'> git reset </a>
 
 git reset changes, at minimum, where the current branch (HEAD) is pointing. The difference between --mixed and --soft is whether or not your index is also modified. So, if we're on branch master with this series of commits:
+
 ```
 - A - B - C (master)
 ```
@@ -124,26 +125,26 @@ And finally, a visualization:
 
 ## <a name='git_merge'> git merge </a>
 
-merge source into master
+merge source into target
 ```
-git checkout <target>     <--- 
+git checkout <target>     
 git merge <source>
 ```
 Note: the source pointer won't change but the target pointer will
 
-ex: **merge feature-1 branch into master branch** 
+ex: **merge feature (source) branch into master branch (target)** 
 
 first, checkout master branch
 ```
 git checkout master
 ```
 
-then, merge feature-1 branch to master
+then, merge feature branch to master
 ```
-git merge feature-1
+git merge feature
 ```
 
-Note: the master branch pointer will move but feature-1 branch will remain as it is
+Note: the master branch pointer will move but feature branch will remain as it is
 
 ---
 **There are 2 types of merge**
@@ -166,6 +167,41 @@ Note: the master branch pointer will move but feature-1 branch will remain as it
 
 ## <a name='git_rebase'> git rebase </a>
 
+Rebase is recreating your work from one branch onto another.
+    
+rebase a branch (target) on top of another branch (base)
+
+Note: the base pointer won't change but the target pointer will
+
+ex: **rebase feature (target) branch on master branch (base)** 
+
+first, checkout master feature
+```git
+git checkout feature
+```
+
+then, merge feature branch to master
+```git
+git rebase master
+```
+
+Note: the master branch pointer will NOT change but feature branch will
+
+
+   ![alt text](./rebase_1.gif)
+    
+   ![alt text](./rebase_2.gif)
+   
+      
+Then we can perform merge feature into master (It will be fast forward) merge
+this way, we can keep a clean history
+
+```git
+git checkout master
+git merge feature
+```
+       
+    
 ## <a name='git_reset'> git rebase -i   (*interactive mode*) </a>
 
 
