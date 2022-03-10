@@ -88,7 +88,7 @@ Life cycle is a sequence of named phases.
 Phases executes sequentially.   
 Executing a phase means executes all previous phases.  
 
-   ![alt text](./maven_PHASES.png)
+   ![alt text](./maven_phases.png)
 The phases in bold - are the main phases commonly used.
 
 ___   
