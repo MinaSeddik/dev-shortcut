@@ -7,15 +7,13 @@
 - [git commit](#git_commit)
 - [git status](#git_status)
 - [git log](#git_log)
-
 - [git chekout](#git_checkout)
 - [git switch](#git_switch)
 - [git restore](#git_restore)
-
 - [git reset](#git_reset)
 - [git merge](#git_merge)
 - [git rebase](#git_rebase)
-- [git rebase -i   (*interactive mode*) ](#git_rebase_iteractive)
+- [git rebase -i  (*interactive mode*) ](#git_rebase_iteractive)
 - [git remote](#git_remote)
 - [git branch](#git_branch)
 - [git fetch](#git_fetch)
@@ -122,6 +120,11 @@ git checkout develop
 the HEAD is pointing to develop branch
 
 
+to go back to previuos commit where the HEAD was pointing to
+```git
+git checkout -
+``
+
 create new branch
 ```git
 git checkout -b <branch_name>
@@ -132,14 +135,10 @@ move HEAD to a particular commit hash
 git checkout -b <commit_hash>
 ```
 
-checkout certain file
-```git
-git checkout HEAD -- <file_name>
-```
 
-OR from certain branch
+checkout certain file from a certain branch
 ```git
-git checkout master -- <file_name>
+git checkout <branch_name> -- <file_name>
 ```
 
 OR from certain commit hash
@@ -147,13 +146,58 @@ OR from certain commit hash
 git checkout <commit_hash> -- <file_name>
 ```
 
+and to move back to the file_name of the HEAD
+```git
+git checkout HEAD -- <file_name>
+```
 
 
 ## <a name='git_switch'> git switch </a> 
 
 It is used to
+- Move HEAD from one branch to another
+- Create a new branch
+- **CANNOT** move HEAD to a particular commit hash - *git checkout should be used instead*  
+
+to switch to develop branch
+```git
+git switch develop
+```
+The HEAD will be pointing to develop branch
 
 
+create new branch
+```git
+git switch -c <branch_name>
+```
+The HEAD will be pointing to the new branch
+
+## <a name='git_restore'> git restore </a> 
+
+It is used to
+- Restore a file from working area
+- Remove a file from staging area  
+  
+  
+
+to restore a file from working area (undo the modifications)  
+and it will be in sync with the HEAD
+```git
+git restore <file_name>
+```
+
+
+to remove a file from staging area (to unstage a file)
+```git
+git restore --staged <file_name>
+```
+This file will be moved to the working area
+
+
+to restore certain file from a certain commit
+```git
+git restore --source <branch_name> -- <file_name>
+```
 
 
 ## <a name='git_reset'> git reset </a>
@@ -658,7 +702,6 @@ and the master branch is still referring to the same:
    ![alt text](./deattached_head.png)
 
 
-
 ## <a name='git_cherrypick'> git cherrypick </a>
 
 Cherry picking in Git means to choose a commit from one branch and apply it onto another.
@@ -682,23 +725,22 @@ git cherry-pick -x <commit-hash>
 
 This will generate a standardized commit message. This way, you (and your co-workers) can still keep track of the origin of the commit and may avoid merge conflicts in the future.
 
-## <a name='git_switch'> git switch </a>
-
-The main purpose is to split and clarify the two different uses of git checkout:
-- git switch can now be used to change branches, as git checkout <branchname> does
-- git restore can be used to reset files to certain revisions, as git checkout --<path_to_file> does
-
-
-
 
 ## <a name='git_revert'> git revert </a>
 
+It creates a new commit that is the opposite of an existing commit
+ ```git
+git revert <commit-hash>
+```
+
+It  creates a new commit with the changes that are rolled back.
 
 
-
-
-
-
-
+the output will be something like this
+ ```git
+$ git log --oneline
+1db4eeb Revert "bad update"
+a1b9870 bad update
+```
 
 
