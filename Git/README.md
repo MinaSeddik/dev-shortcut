@@ -567,13 +567,6 @@ git clone https://github.com/gittower/<project_name>.git
 
 ex:
  ```git
-mkdir <project_dir>
-cd <project_dir>
-git clone https://github.com/gittower/<project_name>.git
-```
-
-
- ```git
 mkdir /home/mina/my_workspace
 cd /home/mina/my_workspace
 git clone git@github.com:MinaSeddik/dev-shortcut.git

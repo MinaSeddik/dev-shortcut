@@ -7,7 +7,7 @@
 - [Agile Methodology](Agile/agile.md)
 - [Java](Java/java.md)
 - [Spring](Spring/spring.md)
-- [Maven Build Automation](Maven/maven.md)
+- [Maven Build Automation](Maven/README.md)
 - [Git](Git/README.md)
 - [Docker](Docker/docker.md)
 - [Jenkins CI/CD](Jenkins/jenkins.md)
