@@ -572,7 +572,7 @@ cd /home/mina/my_workspace
 git clone git@github.com:MinaSeddik/dev-shortcut.git
 ```
 
-a new project directory named "shortcut" will be created
+a new project directory named "dev-shortcut" will be created
 
 
 ## <a name='git_config'> git config </a>

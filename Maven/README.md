@@ -3,6 +3,7 @@
 
 - [Install Maven](#install_maven)
 - [Maven Build lifecycle](#life_cycle)
+- [Maven goals and plugins](#goals_plugins)
 
 
 
@@ -11,7 +12,7 @@
 #### Installing Maven on Ubuntu using apt is a simple, straightforward process.
 
 Update the package index and install Maven by entering the following commands:
-```
+```bash
 sudo apt update
 sudo apt install maven
 ```
@@ -31,13 +32,13 @@ https://www.javahelps.com/2015/03/install-oracle-jdk-in-ubuntu.html
 
 
 to install OpenJDK 11 , by typing:
-```
+```bash
 sudo apt update
 sudo apt install default-jdk
 ```
 
 to install openjdk Java 8
-```
+```bash
 sudo apt update
 sudo apt install openjdk-8-jdk
 ```
@@ -51,7 +52,7 @@ java -version
 #### Setup environment variables
 
 create a new file named maven.sh in the /etc/profile.d/ directory.
-```
+```bash
 sudo vi /etc/profile.d/maven.sh
 ```
 
@@ -83,6 +84,15 @@ mvn -version
 
 ## <a name='life_cycle'> Maven Build lifecycle </a>
 
+Life cycle is a sequence of named phases.  
+Phases executes sequentially.   
+Executing a phase means executes all previous phases.  
+
+   ![alt text](./maven_PHASES.png)
+The phases in bold - are the main phases commonly used.
+
+___   
+   
 Maven has the following three standard lifecycles :
 
 1. clean
@@ -139,6 +149,75 @@ The clean lifecycle consisting of the following 3 phases
 | 3           | post-site                          |
 | 4           | site-deploy                        |
 
+
+## <a name='goals_plugins'> Maven goals and plugins </a>
+---
+
+### Maven plugin
+Plugin is a collection of goals also called MOJO (Maven Old Java Object).
+
+### Maven goal
+A **goal** represents a specific task which contributes to the building and managing of a project. 
+It may be bound to zero or more build phases. 
+A goal not bound to any build phase could be executed outside of the build lifecycle by direct invocation.
+
+Maven is based around the central concept of a **Build Life Cycles.** 
+Inside each Build Life Cycles there are **Build Phases**, 
+and inside each Build Phases there are **Build Goals**.
+
+Maven can either execute a goal or a phase
+
+##### Executing phase
+   
+ex:
+```
+mvn install
+```
+starting from the first phase, all the phases are executed sequentially till the ‘install’ phase  
+
+
+##### Executing goal
+   
+Most of Maven's functionality is in plugins. A plugin provides a set of goals that can be executed using the following syntax:
+
+```
+ mvn [plugin-name]:[goal-name]
+```
+
+For example, a Java project can be compiled with the compiler-plugin's compile-goal by running 
+```
+mvn compiler:compile
+```
+
+
+**Goals provided by plugins can be associated with different phases of the lifecycle.** 
+For example, by default, the goal 
+> compiler:compile  
+
+is associated with the compile phase,   
+*compiler* is **the plugin name** while *compile* is a **goal** inside this plugin   
+__Full plugin name: maven-compiler-plugin__
+
+
+
+while 
+> surefire:test 
+
+is associated with the test phase.   
+*surefire* is **the plugin name** while *test* is a **goal** inside this plugin   
+__Full plugin name: maven-surefire-plugin__
+
+Consider the following command:
+```
+mvn test
+```
+
+When the preceding command is executed, Maven runs all goals associated with each of the phases up to and including the test phase. In such a case, Maven runs the resources:resources goal associated with the process-resources phase, then compiler:compile, and so on until it finally runs the surefire:test goal.
+
+However, even though a build phase is responsible for a specific step in the build lifecycle, the manner in which it carries out those responsibilities may vary. And this is done by declaring the plugin goals bound to those build phases.
+
+Maven Architecture:
+   ![alt text](./maven_arch.png)
 
 
 
