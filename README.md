@@ -8,7 +8,7 @@
 - [Java](Java/java.md)
 - [Spring](Spring/spring.md)
 - [Maven Build Automation](Maven/maven.md)
-- [Git](Git/git.md)
+- [Git](Git/README.md)
 - [Docker](Docker/docker.md)
 - [Jenkins CI/CD](Jenkins/jenkins.md)
 - Linux
