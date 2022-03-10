@@ -30,7 +30,9 @@
 - [Generate SSH key pair](./ssh.md)
 - [Git best practices](#git_best_practices)
 
-
+[//]: # (TODO Fork / pull request / merge request / keep the forked repo in sync with the upstream repo)
+[//]: # (TODO good refrence: https://www.youtube.com/watch?v=deEYHVpE1c8)
+ 
 
 ## <a name='git_version'> git version </a>
 
