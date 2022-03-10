@@ -27,6 +27,7 @@
 - [git reflog](#git_reflog)
 - [git cherrypick](#git_cherrypick)
 - [git revert](#git_revert)   
+- [Generate SSH key pair](./ssh.md)
 - [Git best practices](#git_best_practices)
 
 
@@ -743,8 +744,11 @@ $ git log --oneline
 a1b9870 bad update
 ```
 
+
+
 ## <a name='git_best_practices'> Git Best Practices </a>
 
 - In github or gitlab, always set master branch as protected branch
 - Follow gitflow strategy to manage relaese, features and hotfixes on git
 - 
+
