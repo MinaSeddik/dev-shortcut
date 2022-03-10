@@ -22,7 +22,7 @@ and recommends
 
 ---
 
-#### Generate key pair of **Ed25519** type  *(recommended)*+
+#### Generate key pair of **Ed25519** type  *(recommended)*
 
 By default, a user’s SSH keys are stored in that user’s ~/.ssh directory.
  ```
@@ -38,7 +38,7 @@ ssh-keygen -t ed25519 -C "your_email@example.com"
 > **-C**: comment
 
 ```
-> Enter a file in which to save the key (/Users/you/.ssh/id_rsa): [Press enter]
+> Enter a file in which to save the key (/Users/you/.ssh/id_ed25519): [Press enter]
 ```
 
 ```
@@ -71,7 +71,7 @@ eval "$(ssh-agent -s)"
 Once the ssh-agent is running the following command will add the new SSH key to the local SSH agent.
 
 ```
-ssh-add -K /Users/you/.ssh/id_ed25519
+ssh-add ~/.ssh/id_ed25519
 ```
 
 The new SSH key is now registered and ready to use!
@@ -84,4 +84,10 @@ Copy the public key
 cat ~/.ssh/id_ed25519.pub
 ```
 
-Paste it over under SSH settings in gitlab 
+Paste it over under SSH settings in gitlab  
+
+
+#### Known_hosts file
+what is the purpose of Known_hosts file?
+> The known_hosts File is a client file containing all remotely connected known hosts, and the ssh client uses this file. This file authenticates for the client to the server they are connecting to. The known_hosts file contains the host public key for all known hosts.
+
