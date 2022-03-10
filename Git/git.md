@@ -3,12 +3,21 @@
 
 
 - [git add / git rm - *Add/Remove file to/from stage area*](#git_add_rm)
+- [git commit](#git_commit)
 - [git status](#git_status)
 - [git log](#git_log)
 - [git reset](#git_reset)
 - [git merge](#git_merge)
 - [git rebase](#git_rebase)
 - [git rebase -i   (*interactive mode*) ](#git_rebase_iteractive)
+- [git remote (*point to remote repo*) ](#git_remote)
+- [git branch](#git_branch)
+- [git fetch](#git_fetch)
+- [git pull](#git_pull)
+- [git push](#git_push)
+- [git stash](#git_stash)
+
+
 
 
 
@@ -41,6 +50,19 @@ git rm fileName
 To remove all staged files
 ```git
 git reset HEAD
+```
+
+## <a name='git_commit'> git commit </a>
+
+```git
+git commit -m "message"
+```
+
+To add more file to the last commit, issue the following command after staging the files
+OR
+To change the message of the last commit
+```git
+git commit --amend
 ```
 
 
@@ -193,7 +215,8 @@ Note: the master branch pointer will NOT change but feature branch will
    ![alt text](./rebase_2.gif)
    
       
-Then we can perform merge feature into master (It will be fast forward) merge
+Then we can perform merge feature into master (fast forward merge)
+
 this way, we can keep a clean history
 
 ```git
@@ -204,10 +227,154 @@ git merge feature
     
 ## <a name='git_reset'> git rebase -i   (*interactive mode*) </a>
 
+```git
+git rebase -i HEAD~3
+```
+
+i: interactive
+
+HEAD~3: rebase (change) last 3 commits
 
 
+you can squash, change commit message, delete a commit and much more
 
 
+## <a name='git_remote'> git remote (*point to remote repo.*) </a>
+
+To list remote
+```git
+git remote -v
+```
+
+To list remote
+```git
+git remote add origin <URL>
+```
+
+To list remote
+```git
+git rename <source> <dest>
+```
+    
+ and much more like delete remote ....
+
+
+## <a name='git_branch'> git branch</a>
+
+Create new branch without check it out
+```git
+git branch <branch_name>
+```
+
+Create new branch and check it out
+```git
+git checkout -b <branch_name>
+```
+
+Delete branch
+```git
+git branch -d <branch_name>
+```
+
+and to delete the remote branch
+```git
+git push origin <branch_name> --delete
+```
+
+list local branches
+```git
+git branch -l
+```
+
+list remote branches
+```git
+git branch -r
+```
+
+list all branches
+```git
+git branch -a
+```
+
+
+## <a name='git_fetch'> git fetch </a>
+
+Used to fetch and update the remote refrences only without changing anything
+
+It'll be usefull to track the remote branch and compare it with the local
+```git
+git fetch  <branch_name>
+```
+
+to fetch current checkout branch
+```git
+git fetch 
+```
+
+to fetch all remote branches
+```git
+git fetch --all
+```
+
+
+## <a name='git_pull'> git pull </a>
+
+pull = fetch + merge 
+```git
+git pull origin <branch_name>
+```
+
+ex: to update master branch from remote
+```git
+git pull origin master
+```
+
+OR
+
+```git
+git checkout master
+git pull  
+```
+
+
+to do rebase instead of merge
+
+pull = fetch + rebase
+```git
+git pull origin master --rebase
+```
+
+OR
+
+```git
+git checkout master
+git pull origin --rebase
+```
+
+## <a name='git_push'> git push </a>
+
+To push the changes to the remote
+```git
+git push origin <branch_name>
+```
+
+ex: to push master branch to the remote
+```git
+git push origin master
+```
+
+ Note: for the first time, you may need to do --set-upstream
+ ```git
+ git push --set-upstream origin <branch>
+```
+
+ex: to push master branch to the remote for the first time
+```git
+git push --set-upstream origin master
+```
+
+
+## <a name='git_stash'> git stash </a>
 
 
 
