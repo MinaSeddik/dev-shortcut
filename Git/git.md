@@ -1,28 +1,47 @@
 # Git Source Control
 
 
-
-- [git add / git rm - *Add/Remove file to/from stage area*](#git_add_rm)
+- [git version](#git_version)
+- [git add](#git_add)
+- [git rm](#git_rm)
 - [git commit](#git_commit)
 - [git status](#git_status)
 - [git log](#git_log)
+
+- [git chekout](#git_checkout)
+- [git switch](#git_switch)
+- [git restore](#git_restore)
+
 - [git reset](#git_reset)
 - [git merge](#git_merge)
 - [git rebase](#git_rebase)
 - [git rebase -i   (*interactive mode*) ](#git_rebase_iteractive)
-- [git remote (*point to remote repo*) ](#git_remote)
+- [git remote](#git_remote)
 - [git branch](#git_branch)
 - [git fetch](#git_fetch)
 - [git pull](#git_pull)
 - [git push](#git_push)
 - [git stash](#git_stash)
+- [git init](#git_init)
+- [git clone](#git_clone)
+- [git config](#git_config)
+- [git tag](#git_tag)
+- [git reflog](#git_reflog)
+- [git cherrypick](#git_cherrypick)
+- [git revert](#git_revert)   
 
 
 
 
+## <a name='git_version'> git version </a>
+
+To view the installed git version on your local
+```git
+git --version
+```
 
 
-## <a name='git_add_rm'> git add / git rm - *Add/Remove file to/from stage area* </a>
+## <a name='git_add'> git add </a>
 
 To add a file to stage, Use: git add <fileName>
 ```git
@@ -41,6 +60,9 @@ OR
 ```git
 git add -all
 ```
+
+## <a name='git_rm'> git rm </a>
+
 
 To remove a file from stage, Use: git rm <fileName>
 ```git
@@ -83,6 +105,55 @@ git log
 ```git
 git log --oneline
 ```
+
+## <a name='git_checkout'> git checkout </a> 
+
+It is used to
+- Move HEAD from one branch to another
+- Create a new branch
+- Move HEAD to a particular commit hash
+- checkout single file 
+
+
+to checkout develop branch
+```git
+git checkout develop
+```
+the HEAD is pointing to develop branch
+
+
+create new branch
+```git
+git checkout -b <branch_name>
+```
+
+move HEAD to a particular commit hash
+```git
+git checkout -b <commit_hash>
+```
+
+checkout certain file
+```git
+git checkout HEAD -- <file_name>
+```
+
+OR from certain branch
+```git
+git checkout master -- <file_name>
+```
+
+OR from certain commit hash
+```git
+git checkout <commit_hash> -- <file_name>
+```
+
+
+
+## <a name='git_switch'> git switch </a> 
+
+It is used to
+
+
 
 
 ## <a name='git_reset'> git reset </a>
@@ -239,7 +310,7 @@ HEAD~3: rebase (change) last 3 commits
 you can squash, change commit message, delete a commit and much more
 
 
-## <a name='git_remote'> git remote (*point to remote repo.*) </a>
+## <a name='git_remote'> git remote </a>
 
 To list remote
 ```git
@@ -375,6 +446,259 @@ git push --set-upstream origin master
 
 
 ## <a name='git_stash'> git stash </a>
+
+
+to stash chnages 
+ ```git
+ git stash
+```
+
+
+to stash a newly created/untracked file
+ ```git
+ git stash -u
+``` 
+
+
+to stash with save message
+ ```git
+ git stash save <message>
+```
+
+ex:
+ ```git
+ git stash save "add style to our site"
+```
+
+to list stash
+ ```git
+ git stash list
+```
+
+to apply last stash
+ ```git
+ git stash apply
+```
+
+Note: apply command doesn't remove the stashed files from the stash area
+
+to remove the stash entry
+ ```git
+ git stash drop
+```
+
+
+finally: pop = apply + remove
+ ```git
+ git stash pop
+```
+the last sash will be applied and removed from the stage area
+
+
+## <a name='git_init'> git init </a>
+
+to init a git tracking repo on your local
+ ```git
+ git init
+```
+
+
+to init a git tracking on the remote repo
+ ```git
+ git init --bare
+```
+
+
+## <a name='git_clone'> git clone </a>
+
+to clone and bring a project from remote repo to local
+ ```git
+mkdir <project_dir>
+cd <project_dir>
+git clone https://github.com/gittower/<project_name>.git
+```
+
+ex:
+ ```git
+mkdir <project_dir>
+cd <project_dir>
+git clone https://github.com/gittower/<project_name>.git
+```
+
+
+ ```git
+mkdir /home/mina/my_workspace
+cd /home/mina/my_workspace
+git clone git@github.com:MinaSeddik/dev-shortcut.git
+```
+
+a new project directory named "shortcut" will be created
+
+
+## <a name='git_config'> git config </a>
+
+to list local git configuration
+ ```git
+ git config --list
+```
+
+to set user name for local repo
+ ```git
+ git config --global user.name "Mina"
+```
+
+to set email for local repo
+ ```git
+ git config --global user.email "mina@example.com"
+```
+
+to set git ui color for git bash
+ ```git
+ git config --global color.ui auto
+```
+
+
+## <a name='git_tag'> git tag </a>
+
+
+to create tag of the current comment
+ ```git
+ git tag v1.0.0
+```
+
+Note: for best practice of tag versioning, Follow **Semantic Versioning**:  
+https://semver.org/
+
+
+
+to list tags
+ ```git
+ git tag -l
+```
+
+
+to push tags to remote
+ ```git
+ git push --tags
+```
+
+to checkout a tag
+ ```git
+ git checkout v1.0.0
+```
+
+
+to delete a tag
+ ```git
+ git tag -d v1.0.0
+```
+
+to delete remote tag
+ ```git
+ git tag -d v1.0.0
+git push --delete origin v1.0.0
+```
+
+
+## <a name='git_reflog'> git reflog </a>
+
+Git keeps track of updates to the tip of branches using a mechanism called reference logs, or "reflogs."
+
+It is a record of all commits that are or were referenced in your repo at any time.
+
+You can use it to view the history of the **HEAD** pointer
+
+ ```git
+ git reflog
+```
+
+This is essentially a short cut that's equivalent to:
+ ```git
+ git reflog show HEAD
+```
+It used to
+- Recovering lost commits
+- undo git merge
+- undo git rebase
+- go back on history
+
+ex:
+ ```git
+git reset HEAD@{2}
+```
+
+OR
+
+ ```git
+git reset 833b2c1
+```
+where "833b2c1" is the hash of the target commit
+
+
+to revert to a certain commit permenantly
+ ```git
+git reset --hard <SHA>
+```
+
+Note: You may got a warning message
+```gitignore
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+```
+
+HEAD is **NOT** pointing to a branch
+
+
+Below is the graphical representation of the current git HEAD. 
+Since we've checkout to a previous commit, now the HEAD is pointing to 5282c7c commit, 
+and the master branch is still referring to the same:
+
+
+   ![alt text](./deattached_head.png)
+
+
+
+## <a name='git_cherrypick'> git cherrypick </a>
+
+Cherry picking in Git means to choose a commit from one branch and apply it onto another.
+
+This is in contrast with other ways such as merge and rebase which normally apply many commits onto another branch.
+
+Make sure you are on the branch you want to apply the commit to
+ ```git
+git checkout master
+```
+
+then, execute the following
+ ```git
+git cherry-pick <commit-hash>
+```
+
+**Note:** If you cherry-pick from a public branch, you should consider using
+ ```git
+git cherry-pick -x <commit-hash>
+```
+
+This will generate a standardized commit message. This way, you (and your co-workers) can still keep track of the origin of the commit and may avoid merge conflicts in the future.
+
+## <a name='git_switch'> git switch </a>
+
+The main purpose is to split and clarify the two different uses of git checkout:
+- git switch can now be used to change branches, as git checkout <branchname> does
+- git restore can be used to reset files to certain revisions, as git checkout --<path_to_file> does
+
+
+
+
+## <a name='git_revert'> git revert </a>
+
+
+
+
+
+
+
 
 
 
