@@ -4,6 +4,8 @@
 - [Install Maven](#install_maven)
 - [Maven Build lifecycle](#life_cycle)
 - [Maven goals and plugins](#goals_plugins)
+- [Maven Profiles](#profiles)
+- [Maven Repository](#repository)
 
 
 
@@ -151,7 +153,7 @@ The clean lifecycle consisting of the following 3 phases
 
 
 ## <a name='goals_plugins'> Maven goals and plugins </a>
----
+
 
 ### Maven plugin
 Plugin is a collection of goals also called MOJO (Maven Old Java Object).
@@ -190,7 +192,7 @@ mvn compiler:compile
 ```
 
 
-**Goals provided by plugins can be associated with different phases of the lifecycle.** 
+**Goals provided by plugins can be associated with different phases of the lifecycle.**    
 For example, by default, the goal 
 > compiler:compile  
 
@@ -222,5 +224,128 @@ Maven Architecture:
 
 
 
+## <a name='profiles'> Maven Profiles </a>
+
+A Build profile is a set of configuration values, which can be used to set or override default values of Maven build.
+
+you can customize build for different environments such as Production v/s Development environments.
+
+Now, under src/main/resources, there are three environment specific files:  
+
+| Sr.No.       | File Name & Description      |
+| :---         |    :----                           |
+| 1            | **env.properties** <br/><br/>  default configuration used if no profile is mentioned.                        |
+| 2            | **env.test.properties** <br/><br/>  test configuration when test profile is used.                        |
+| 3            | **env.prod.properties** <br/><br/>  production configuration when prod profile is used.                        |
+
+ex: in pom.xml 
+
+```xml
+   <profiles>
+      <profile>
+         <id>test</id>
+         <build>
+            <plugins>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-antrun-plugin</artifactId>
+                  <version>1.1</version>
+                  <executions>
+                     <execution>
+                        <phase>test</phase>
+                        <goals>
+                           <goal>run</goal>
+                        </goals>
+                        <configuration>
+                           <tasks>
+                              <echo>Using env.test.properties</echo>
+                              <copy file="src/main/resources/env.test.properties"
+                                 tofile="${project.build.outputDirectory}/env.properties"/>
+                           </tasks>
+                        </configuration>
+                     </execution>
+                  </executions>
+               </plugin>
+            </plugins>
+         </build>
+      </profile>
+   </profiles>
+```
+we created profile **test**
+
+
+Now, we can run test profile using
+```
+mvn test -Ptest
+```
+
+
+## <a name='repository'> Maven Repository </a>
+
+
+Maven repository are of three types. The following illustration will give an idea regarding these three types.
+
+- Local
+- Central
+- Remote
+
+    ![alt text](./maven_repository.jpg)
+    
+#### 1. Local Repository
+
+Maven local repository by default get created by Maven in %USER_HOME% directory. To override the default location, mention another path in Maven settings.xml file available at %M2_HOME%\conf directory.
+
+```xml
+<settings xmlns = "http://maven.apache.org/SETTINGS/1.0.0"
+   xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation = "http://maven.apache.org/SETTINGS/1.0.0 
+   http://maven.apache.org/xsd/settings-1.0.0.xsd">
+   <localRepository>C:/MyLocalRepository</localRepository>
+</settings>
+```
+
+When you run Maven command, Maven will download dependencies to your custom path.
+
+
+#### 2. Central Repository
+
+When Maven does not find any dependency in local repository, it starts searching in central repository using following URL − https://repo1.maven.org/maven2/
+
+To browse the content of central maven repository, maven community has provided a URL − 
+https://search.maven.org/#browse
+
+
+#### 3. Remote Repository
+
+Sometimes, Maven does not find a mentioned dependency in central repository as well. It then stops the build process and output error message to console. To prevent such situation, Maven provides concept of Remote Repository, which is developer's own custom repository containing required libraries or other project jars.
+
+```xml
+<project xmlns = "http://maven.apache.org/POM/4.0.0"
+   xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation = "http://maven.apache.org/POM/4.0.0
+   http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+   <groupId>com.companyname.projectgroup</groupId>
+   <artifactId>project</artifactId>
+   <version>1.0</version>
+   <dependencies>
+      <dependency>
+         <groupId>com.companyname.common-lib</groupId>
+         <artifactId>common-lib</artifactId>
+         <version>1.0.0</version>
+      </dependency>
+   <dependencies>
+   <repositories>
+      <repository>
+         <id>companyname.lib1</id>
+         <url>http://download.companyname.org/maven2/lib1</url>
+      </repository>
+      <repository>
+         <id>companyname.lib2</id>
+         <url>http://download.companyname.org/maven2/lib2</url>
+      </repository>
+   </repositories>
+</project>
+```
 
 
