@@ -435,8 +435,22 @@ mvn clean package -U
 ```
 
 
+## <a name='dependencies'> Manage Dependencies </a>
 
-## <a name='change_version'> change versionChange version from snapshot to release </a>
+| Sr.No.       | File Name & Description      |
+| :---         |    :----                           |
+| 1            | **compile** <br/><br/>   This scope indicates that dependency is available in classpath of project. It is default scope.                       |
+| 2            | **provided** <br/><br/>  This scope indicates that dependency is to be provided by JDK or web-Server/Container at runtime.                        |
+| 3            | **runtime** <br/><br/>   This scope indicates that dependency is not required for compilation, but is required during execution.                        |
+| 4            | **test** <br/><br/>   This scope indicates that the dependency is only available for the test compilation and execution phases.                       |
+| 5            | **system** <br/><br/>   This scope indicates that you have to provide the system path.                      |
+| 6            | **import** <br/><br/>    This scope is only used when dependency is of type pom. This scope indicates that the specified POM should be replaced with the dependencies in that POM's <dependencyManagement> section.                    |
+
+
+
+
+
+## <a name='change_version'> Change version from snapshot to release </a>
 
 Use **versions:set** from the versions-maven plugin:
 
@@ -464,21 +478,5 @@ mvn versions:commit
 ```
 
 if you're happy with the results.
-
-
-## <a name='dependencies'> Manage Dependencies </a>
-
-| Sr.No.       | File Name & Description      |
-| :---         |    :----                           |
-| 1            | **compile** <br/><br/>   This scope indicates that dependency is available in classpath of project. It is default scope.                       |
-| 2            | **provided** <br/><br/>  This scope indicates that dependency is to be provided by JDK or web-Server/Container at runtime.                        |
-| 3            | **runtime** <br/><br/>   This scope indicates that dependency is not required for compilation, but is required during execution.                        |
-| 4            | **test** <br/><br/>   This scope indicates that the dependency is only available for the test compilation and execution phases.                       |
-| 5            | **system** <br/><br/>   This scope indicates that you have to provide the system path.                      |
-| 6            | **import** <br/><br/>    This scope is only used when dependency is of type pom. This scope indicates that the specified POM should be replaced with the dependencies in that POM's <dependencyManagement> section.                    |
-
-
-
-
 
 
