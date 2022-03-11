@@ -6,6 +6,14 @@
 - [Maven goals and plugins](#goals_plugins)
 - [Maven Profiles](#profiles)
 - [Maven Repository](#repository)
+- [Maven Snapshots](#snapshots)
+- [Manage Dependencies](#dependencies)
+- [Change version from snapshot to release](#change_version)
+
+
+
+
+
 
 
 
@@ -334,7 +342,7 @@ Sometimes, Maven does not find a mentioned dependency in central repository as w
          <artifactId>common-lib</artifactId>
          <version>1.0.0</version>
       </dependency>
-   <dependencies>
+   </dependencies>
    <repositories>
       <repository>
          <id>companyname.lib1</id>
@@ -347,5 +355,130 @@ Sometimes, Maven does not find a mentioned dependency in central repository as w
    </repositories>
 </project>
 ```
+
+In you ~/.m2 directory create an empty file named - settings.xml. Copy the following content into this settings.xml file
+
+```xml
+<settings>
+    <mirrors>
+        <mirror>
+        <!--This sends everything else to /public -->
+            <id>nexus</id>
+            <mirrorOf>*</mirrorOf>
+            <url>http://localhost:8081/nexus/content/groups/public</url>
+        </mirror>
+    </mirrors>
+
+    <profiles>
+        <profile>
+            <id>nexus</id>
+            <!--Enable snapshots for the built in central repo to direct -->
+            <!--all requests to nexus via the mirror -->
+            <repositories>
+                <repository>
+                <id>central</id>
+                <url>http://central</url>
+                <releases><enabled>true</enabled></releases>
+                <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+            </repositories>
+
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <url>http://central</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+    <!--make the profile active all the time -->
+        <activeProfile>nexus</activeProfile>
+    </activeProfiles>
+</settings>
+```
+
+And add these following lines in your project's pom.xml file
+```xml
+<distributionManagement>
+    <snapshotRepository>
+        <id>my-snapshots</id>
+        <name>My internal repository</name>
+        <url>http://localhost:8081/nexus/content/repositories/snapshots</url>
+    </snapshotRepository>
+
+    <repository>
+        <id>my-releases</id>
+        <name>My internal repository</name>
+        <url>http://localhost:8081/nexus/content/repositories/releases</url>
+    </repository>
+</distributionManagement>
+```
+
+
+## <a name='snapshots'> Maven Snapshots </a>
+
+SNAPSHOT is a special version that indicates a current development copy. Unlike regular versions, Maven checks for a new SNAPSHOT version in a remote repository for every build.
+
+Now data-service team will release SNAPSHOT of its updated code every time to repository, say data-service: 1.0-SNAPSHOT, replacing an older SNAPSHOT jar.
+
+
+#### Snapshot vs Version
+In case of Version, if Maven once downloaded the mentioned version, say data-service:1.0, it will never try to download a newer 1.0 available in repository. To download the updated code, data-service version is be upgraded to 1.1.
+
+you can force maven to download latest snapshot build using -U switch to any maven command.
+```
+mvn clean package -U
+```
+
+
+
+## <a name='change_version'> change versionChange version from snapshot to release </a>
+
+Use **versions:set** from the versions-maven plugin:
+
+```
+mvn versions:set -DnewVersion=2.50.1-SNAPSHOT
+```
+
+
+Use versions:set from the versions-maven plugin:
+
+mvn versions:set -DnewVersion=2.50.1-SNAPSHOT
+It will adjust all pom versions, parent versions and dependency versions in a multi-module project.
+
+If you made a mistake, do
+
+```
+mvn versions:revert
+```
+
+
+mvn versions:revert
+
+```
+mvn versions:commit
+```
+
+if you're happy with the results.
+
+
+## <a name='dependencies'> Manage Dependencies </a>
+
+| Sr.No.       | File Name & Description      |
+| :---         |    :----                           |
+| 1            | **compile** <br/><br/>   This scope indicates that dependency is available in classpath of project. It is default scope.                       |
+| 2            | **provided** <br/><br/>  This scope indicates that dependency is to be provided by JDK or web-Server/Container at runtime.                        |
+| 3            | **runtime** <br/><br/>   This scope indicates that dependency is not required for compilation, but is required during execution.                        |
+| 4            | **test** <br/><br/>   This scope indicates that the dependency is only available for the test compilation and execution phases.                       |
+| 5            | **system** <br/><br/>   This scope indicates that you have to provide the system path.                      |
+| 6            | **import** <br/><br/>    This scope is only used when dependency is of type pom. This scope indicates that the specified POM should be replaced with the dependencies in that POM's <dependencyManagement> section.                    |
+
+
+
+
 
 
