@@ -9,11 +9,7 @@
 - [Maven Snapshots](#snapshots)
 - [Manage Dependencies](#dependencies)
 - [Change version from snapshot to release](#change_version)
-
-
-
-
-
+- [Java web application project structure](#project_structure)
 
 
 
@@ -448,8 +444,6 @@ mvn clean package -U
 
 
 
-
-
 ## <a name='change_version'> Change version from snapshot to release </a>
 
 Use **versions:set** from the versions-maven plugin:
@@ -477,6 +471,71 @@ mvn versions:revert
 mvn versions:commit
 ```
 
-if you're happy with the results.
+if you're happy with the results.   
+ **versions:commit** : Removes the initial backup of the pom, thereby accepting the changes.  
+
+Additionally to the versions:set one can specify 
+> **-DgenerateBackupPoms=false**, 
+
+as by default this plugin back ups original pom files.
 
 
+
+```
+mvn versions:set -DnewVersion=2.4.0-SNAPSHOT -DgenerateBackupPoms=false
+```
+
+
+
+## <a name='project_structure'> Java web application project structure </a>
+
+```
+project 
+│
+└─── src
+│    └─── main
+│        └─── java
+│             └─── com.morganstanley.peopletracker
+│                  └─── config
+│                       │   SpringConfig.java
+│                       │   ...
+│                  └─── controller
+│                       │   WelcomeController.java
+│                       │   ...
+│                  │    WelcomeController.java
+│                  │    ...
+│             └─── resources
+│                  │   logback.xml
+│                  │   env.dev.properties
+│                  │   ...
+│             └─── webapp
+│                  └─── WEB-INF
+│                       │   logback.xml
+│                       │   ...
+│                  │   ...
+└─── target
+│    └─── WEB-INF
+│         └─── classes
+│              └─── com.morganstanley.peopletracker
+│                   └─── config
+│                        │   SpringConfig.class
+│                        │   ...
+│                   └─── controller
+│                        │   WelcomeController.class
+│                        │   ...
+│                   │    WelcomeController.class
+│                   │    ...
+│         └─── lib
+│              │   abc.jar
+│              │   xyz.jar
+│              │   ...
+│         │   web.xml
+│     └─── META-INF
+│          │   context.xml
+│          │   ...
+│     │   ...
+│   pom.xml
+│   VERSION
+│   README.md
+│   CHANGELOG.md
+```

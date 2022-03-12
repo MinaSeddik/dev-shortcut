@@ -6,7 +6,8 @@
 
 - [Agile Methodology](Agile/agile.md)
 - [Java](Java/java.md)
-- [Spring](Spring/spring.md)
+- [Spring](Spring/README.md)
+- [cglib - *Code generation library*]()
 - [Maven Build Automation](Maven/README.md)
 - [Git](Git/README.md)
 - [Docker](Docker/docker.md)
@@ -28,12 +29,13 @@
   - RabitMQ
 - Zookeeper
 - Logging - *best practices*
-- Tomcat Server
+- [Tomcat Server](Tomcat/README.md)
 - Apache Web Server
 - Nginix Server
 - Nagios Server
-- Zuul - *API gateway*
 - Jenkins Devops
+- Sonatype Server
+- Zuul - *API gateway*
 - Cache
   - Redis
   - Guavus
