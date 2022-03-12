@@ -282,5 +282,5 @@ if(ac == null){
 
 
 For more details about ContextLoaderListener and DispatcherServlet;   
-check out [tomcat web container listener](Tomcat/README.md#listener) and [tomcat web container servlet](Tomcat/README.md#servlet)
+check out [tomcat web container listener](../Tomcat/README.md#listener) and [tomcat web container servlet](../Tomcat/README.md#servlet)
 
