@@ -157,7 +157,7 @@ Check out the [Cryptography git repo](https://github.com/MinaSeddik/Cryptographg
 Asymmetric Encryption, also known as Public-Key Cryptography, is an example of one type. Unlike “normal” (symmetric) encryption, Asymmetric Encryption encrypts and decrypts the data using two separate yet mathematically connected cryptographic keys. 
 These keys are known as a **Public Key** and a **Private Key**
 
-![Symmetric_Encryption](ASymmetric-Encryption.png)
+![Asymmetric_Encryption](Asymmetric-Encryption.png)
 
 #### Examples of Asymmetric encryption:
 - Rivest Shamir Adleman (RSA)
