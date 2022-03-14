@@ -1,10 +1,10 @@
-# Java Cryptography
+# Cryptography
 
 
 - [Generate Random Cryptographically Secure Token](#random_token)
 - [UUIDs](#uuids)
 - [bycrypt](#bycrypt)   <--------- to be done TODO
-- Symetric key vs A
+- [Symmetric vs Asymmetric Encryption](./SymmetricAsymmetricEncryption.md)
 
 
 
