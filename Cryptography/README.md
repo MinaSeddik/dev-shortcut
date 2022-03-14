@@ -1,10 +1,14 @@
 # Cryptography
 
 
-- [Generate Random Cryptographically Secure Token](#random_token)
+- [Generate Random Cryptographically Secure Token - *( for token and API keys)*](#random_token)
 - [UUIDs](#uuids)
 - [bycrypt](#bycrypt)   <--------- to be done TODO
 - [Symmetric vs Asymmetric Encryption](./SymmetricAsymmetricEncryption.md)
+    - [Symmetric Java examples](#./SymmetricAsymmetricEncryption.md/symmetric_java)
+    - [Asymmetric Java examples](#./SymmetricAsymmetricEncryption.md/asymmetric_java)
+    - [ssh-keygen tool to generate public/private keys](./SymmetricAsymmetricEncryption.md/#asymmetric_ssh_keygen)
+    - [Java keytool to generate public/private keys](./SymmetricAsymmetricEncryption.md/#asymmetric_java_keytool)
 
 
 
