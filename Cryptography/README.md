@@ -3,7 +3,7 @@
 
 - [Generate Random Cryptographically Secure Token - *( for token and API keys)*](#random_token)
 - [UUIDs](#uuids)
-- [bycrypt](#bycrypt)   <--------- to be done TODO
+- [Bcrypt Hashing](#bcrypt) 
 - [Symmetric vs Asymmetric Encryption](./SymmetricAsymmetricEncryption.md)
     - [Symmetric Java examples](./SymmetricAsymmetricEncryption.md/#symmetric_java)
     - [Asymmetric Java examples](./SymmetricAsymmetricEncryption.md/#asymmetric_java)
@@ -85,7 +85,7 @@ The representation of the UUID uses hex digits
     ```  
 
 
-## <a name='bycrypt'> bycrypt </a>
+## <a name='bcrypt'> Bcrypt Hashing </a>
 
 ##### Introduction
 1. **Plain Text** is dangerous as the attacker can steal the database with passwords or get access to the passwords by other methods like SQL injection.
