@@ -13,7 +13,7 @@
 - [Cryptography](Cryptography/README.md)
 - [Docker](Docker/docker.md)
 - [Jenkins CI/CD](Jenkins/jenkins.md)
-- [HTTP Cache](HttpCache/README.md)
+- [HTTP Headers](HttpHeaders/README.md)
 - Linux
 - Design Pattern
 - Regular expressions
@@ -34,7 +34,6 @@
 - [Tomcat Server](Tomcat/README.md)
 - Apache Web Server
 - Nginix Server
-- Nagios Server
 - Jenkins Devops
 - Sonatype Server
 - Zuul - *API gateway*

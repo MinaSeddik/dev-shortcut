@@ -387,7 +387,7 @@ Consequently, there must not be any session identifiers.
 ## <a name='cache'> Tomcat: Cache-Control </a>
 
 please revise:  
-[Cache-control HTTP header](../HttpCache/README.md)
+[Cache-control HTTP header](../HttpHeaders/README.md)
 
 **ExpiresFilter** is a Java Servlet API port of *Apache mod_expires*.   
 This filter controls the setting of the Expires HTTP header and the max-age directive of the Cache-Control HTTP header in server responses.    

@@ -12,6 +12,12 @@
 - [HATEOAS](#hateoas)
 - [Entity (Domain model) To DTO Conversion](#domain_to_dto)
 - [Error Handling](#error_handling)
+- [Logging](#logging)
+- [Sending a notification email to the development team upon Errors on the System](#notification_email)
+- [API Metrics and Monitoring](#api_metrics)
+- [Web Sockets](#web_socket)
+- [More Advanced topics](#advanced_topics)
+
 
 
 
@@ -748,7 +754,365 @@ project
 
 ## <a name='error_handling'> Error Handling </a> 
 
+Best practice to have the followig fields in the json object
+- **message**: details message to be displayed to the user
+- **status**: HTTP Status code  
+- **code**: error code of the application   
+  - This is very import number (or string) to indicate weather this error is application-related error or third-party related error 
+  - for example when you are integrating with a payment portal, and this 3rd party will send an error related message, It will be a good practice to assign a code for this 3rd party errors 
+- **track_id**: internal identifier to help us find log data for debugging.
+    - this will be UUID listed in the log file, it will be helpfull when investigating the error in the log file
 
+
+For validation, 
+- it is a good practice to Simply **fail on the first validation error** and return that message.
+
+
+#### Twitter Error Handling payload
+
+```json
+{
+    "errors": [
+        {
+            "code":215,
+            "message":"Bad Authentication data."
+        }
+    ]
+}
+```
+
+
+#### Facebook Error Handling payload
+
+```json
+{
+    "error": {
+        "message": "Missing redirect_uri parameter.",
+        "type": "OAuthException",
+        "code": 191,
+        "fbtrace_id": "AWswcVwbcqfgrSgjG80MtqJ"
+    }
+}
+```
+
+OR
+
+```json
+{
+  "error": {
+    "message": "Message describing the error", 
+    "type": "OAuthException", 
+    "code": 190,
+    "error_subcode": 460,
+    "error_user_title": "A title",
+    "error_user_msg": "A message",
+    "fbtrace_id": "EJplcsCHuLu"           <------  to help us find log data for debugging.
+  }
+}
+```
+
+#### SoftXpert Error Handling payload
+
+
+```json
+{
+  "Status": 400,
+  "Errors": [
+    {
+      "Code": 5,
+      "Message": "Your card number is incorrect."
+    }
+  ],
+  "Validations": [
+    {
+      "Field": "cardNumber",
+      "Message": "Your card number is incorrect."
+    }
+  ]
+}
+```
+
+
+## <a name='logging'> Logging </a>
+
+The purpose of this section is to create a meaningful logs because It’s very hard to know what information you’ll need during troubleshooting. 
+
+
+#### 1. Make Your Log Entries Meaningful With Context
+ 
+- Consider the following 2 log entries:
+> 2017-05-23T15:02:27Z | WARN | Record not found
+
+
+> 2017-05-23T15:02:27Z | WARN | Project with the id ’53’ was not found
+
+Which one would you rather have? The second one, right? 
+
+
+Messages are much more valuable with added context and more details as possible, like:
+> Transaction 2346432 failed: cc number checksum incorrect
+
+> User 54543 successfully registered e-mail user@domain.com
+
+> IndexOutOfBoundsException: index 12 is greater than collection size 10
+
+Context propagation
+```java 
+  public void storeUserRank(int userId, int rank, String game) {
+    try {
+      ... deal database ...
+    } catch(DatabaseException de) {
+      throw new RankingException("Can't store ranking for user "+userId+" in game "+ game + " because " + de.getMessage() );
+    }
+  }
+```
+
+
+#### 2. Use a Standard Date and Time Format
+
+- ISO standard called ISO-8601.
+- Add timestamps either in UTC or local time plus **offset**
+
+#### 3. Include the Stack Trace When Logging an Exception
+
+- Include the fully qualified class name
+- Include the stack trace when logging exceptions
+- For the developer performing a post-mortem debug, the stack trace is essential information that will help them connect the dots.
+
+#### 4. Include the Name of the Thread When Logging From a Multi-Threaded Application
+
+- Include the thread’s name when logging from a multi-threaded application
+
+#### 5. Log after, not before
+
+```
+// don't do that
+log.info("Making request to REST API")
+restClient.makeRequest()
+ 
+// do that
+restClient.makeRequest()
+log.info("Made request to REST API")
+```
+
+- The first log statement doesn’t tell much. When reading it, you will not know if the REST call was successful or not.
+
+- The second log is much better. It clearly states that the operation right before was successful. If the REST call would have failed, you would not see this log – there would be an exception instead.
+
+- I apply this rule to all INFO logs. However I make exceptions for DEBUG.
+
+
+#### 6. Separate parameters and messages
+
+```java
+// don't do that
+restClient.makeRequest()
+log.info("Made request to {} on REST API.", url)
+ 
+// do that
+restClient.makeRequest()
+log.info("Made request to REST API. [url={}]", url)
+```
+
+- The first log message has some flaws. It’s difficult to parse for example for **Grok patterns**.   
+- The seconds version has none of these flaws. It’s easy to parse because the parameter list has a clear syntax.
+
+
+```java
+try {
+    restClient.makeRequest()
+    log.info("Made request to REST API. [url={}]", url)
+} catch(e: UnauthorizedException) {
+    log.warn("Request to REST API was rejected because user is unauthorized. [url={}, result={}]", url, result)
+} catch(e: Exception) {
+    log.error("Request to REST API failed. [url={}, exception={}]", url, exception)
+}
+``` 
+
+#### 7. INFO is for business, DEBUG for technology
+
+- The INFO log should look like a book. It should tell you what had happened, not necessarily how. This means that INFO is better suited for business-like log messages compared to technical stuff. Technical related messages should (usually) be DEBUG.
+
+```
+DEBUG | Saved user to newsletter list. [user="Thomas", email="thomas@tuhrig.de"]
+DEBUG | Send welcome mail. [user="Thomas", email="thomas@tuhrig.de"]
+INFO  | User registered for newsletter. [user="Thomas", email="thomas@tuhrig.de"]
+DEBUG | Started cron job to send newsletter of the day. [subscribers=24332]
+INFO  | Newsletter send to user. [user="Thomas"]
+INFO  | User unsubscribed from newsletter. [user="Thomas", email="thomas@tuhrig.de"]
+```
+   
+#### Good practice for Logging
+
+1. Linux systems typically save their log files under **/var/log** directory.
+    - Create dir named "my-app" under **/var/log** and grant it appropriate permission
+    - **/var/log/my-app** should be accessable over **ftp** to check logs  
+      
+2. **Log4j** has security Vulnerability 
+    - version **2.16** and later should be used instead
+       
+3. The favorite is the combination of slf4j and logback because it is very powerful and relatively easy to configure (and allows JMX configuration or reloading of the configuration file)
+
+4. **Log4j** archiving
+      - Assuming that you're using RollingFileAppender? In which case, 
+        it has a property called **MaxBackupIndex** which you can set to limit the number of files. 
+        For example:
+        ```
+        log4j.appender.R=org.apache.log4j.RollingFileAppender
+        log4j.appender.R.File=example.log
+        log4j.appender.R.MaxFileSize=100KB
+        log4j.appender.R.MaxBackupIndex=7
+        log4j.appender.R.layout=org.apache.log4j.PatternLayout
+        log4j.appender.R.layout.ConversionPattern=%p %t %c - %m%n
+        ```
+      - You can perform your housekeeping in a separate script which can be cronned to run daily. 
+      Something like this:
+      ```bash
+        find /path/to/logs -type f -mtime +7 -exec rm -f {} \;
+      ```
+        
+5. **Log4j** to send **ALERT EMAIL** upon Exception
+
+        
+## <a name='notification_email'> Sending a notification email to the development team upon Errors on the System</a>        
+
+- The  development team wanted to get notified as soon as something goes wrong in our production system, a critical java web application serving thousands of customers daily.   
+- here we will present a simple solution we have implemented using a custom log4j appender based on stats4j and an smtpappender  
+
+First of all, define in your **log4j.properties** file your appender properly:
+
+```
+#CONFIGURE SMTP
+log4j.appender.email=org.apache.log4j.net.SMTPAppender
+log4j.appender.email.SMTPHost=mail.mydomain.com
+log4j.appender.email.SMTPUsername=myuser@mydomain.com
+log4j.appender.email.SMTPPassword=mypw
+log4j.appender.email.From=myuser@mydomain.com
+log4j.appender.email.To=myuser@mydomain.com
+log4j.appender.email.Subject=Log of messages
+log4j.appender.email.BufferSize=1
+log4j.appender.email.EvaluatorClass=TriggerLogEvent
+log4j.appender.email.layout=org.apache.log4j.PatternLayout
+log4j.appender.email.layout.ConversionPattern=%m
+```        
+
+Next, make a special class that will be used just for sending email. Example:
+
+```java
+package com.foo.mailer;
+import org.apache.log4j.Logger;
+
+public class Mailer {
+   private static final Logger logger = Logger.getLogger(Mailer.class);
+
+   public void logMail(String mailString) {
+      logger.info(mailString);
+   }
+}
+```
+
+
+Next, put in **log4j.properties** configuration for this class:
+
+```
+# INFO level will be logged
+log4j.logger.com.foo.mailer = INFO, email
+# turn off additivity
+log4j.additivity.com.foo.mailer = false
+```
+
+Now, whenever you want to send an email using log4j, put this in your code:
+
+```java
+new Mailer().logMail("This mail should be sent");
+```
+
+
+
+#### Here is another solution to be tried using XML configuration
+
+
+```xml
+<appender name="ErrorEmailAppender" class="org.apache.log4j.net.SMTPAppender">
+    <param name="SMTPHost" value="mail.mydomain.com" />
+    <param name="SMTPUsername" value="myuser@mydomain.com" />
+    <param name="SMTPPassword" value="password" />
+    <param name="From" value="myuser@mydomain.com" />
+    <param name="To" value="myuser@mydomain.com" />
+    <param name="Subject" value="Log of messages" />
+    <param name="BufferSize" value="1" />
+    <param name="EvaluatorClass" value="TriggerLogEvent" />
+    <layout class="org.apache.log4j.PatternLayout">
+        <param name="ConversionPattern" value="%t %m%n"/>
+    </layout>
+</appender>
+
+<logger name="com.foo.mailer">
+    <level value="INFO" />
+    <appender-ref ref="ErrorEmailAppender"/>
+</logger>
+```
+
+## <a name='api_metrics'> API Metrics and Monitoring</a>
+
+
+#### Prerequisites
+
+   - Dropwizard java lib 
+   - https://mykidong.medium.com/howto-measure-the-performance-of-an-application-using-metrics-716ad3ab25fb
+   - Meter Registry Java lib (without spring to be digested, then with spring)
+   - Time series database - InfluxDB
+   - Combine them together
+   
+   
+Starting Reference:    
+https://www.youtube.com/watch?v=JAdxO1XboJY   
+https://www.youtube.com/watch?v=LkWVFz9WGeU      
+
+
+
+
+## <a name='web_socket'> Web Sockets</a>
+
+The WebSocket clients sends the HTTP request asking for a WebSocket connection, then the server responds with an HTTP 101 Switching protocols, meaning that it accepts the connection, and then the client can start to send and receive data in binary format.
+
+Example client request:
+```
+GET /chat HTTP/1.1
+Host: server.example.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==
+Sec-WebSocket-Protocol: chat, superchat
+Sec-WebSocket-Version: 13
+Origin: http://example.com
+```
+
+
+Example server response:
+```
+GET /chat HTTP/1.1
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
+Sec-WebSocket-Protocol: chat
+```
+
+
+- start with stomp brocker for simple application as POC and use Postman as a client to test it
+- Use Redis or Active MQ or Rabbit MQ message broker for more realistic implementation
+
+
+
+## <a name='advanced_topics'> More Advanced topics </a>
+
+
+1. Rate Limiting
+2. Retrying Policy
+3. Password Encryption in the properties file for Application using Jasypt
+4. API Gateway
+ 
 
 
 
