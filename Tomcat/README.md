@@ -18,6 +18,7 @@
 - [Set ContextPath of a web application](#set_context)
 - [Setting Up Tomcat User](#tomcat_user)
 - [Configure SSL](#configure_ssl)
+- [IP whitelist for tomcat](#ip_whitelist)
 
 
 
@@ -856,6 +857,68 @@ If you wish to have Tomcat service automatically start at boot time, use:
 ```bash
 $ sudo systemctl enable tomcat
 ```
+
+
+
+
+## <a name='ip_whitelist'> IP whitelist for tomcat </a>
+
+There is 2 ways to whitelist IP(s) on Tomcat
+
+#### 1. on Tomcat Server itself
+ 
+##### 1.1 For the whole apps on the server
+
+in server.xml file
+```xml
+<Engine name="Catalina" defaultHost="localhost">
+    ...
+    ...
+    ...
+    <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+        allow="10\.132\.77\.55|10\.132\.76\.120|10\.132\.77\.47"/>
+    ...
+</Engine>
+```
+
+
+##### 1.2 For Specific app on the server
+
+in TOMCAT_HOME/webapps/$(WEB_APP)/WEB-INF/web.xml file
+```xml
+<filter>
+      <filter-name>Remote Address Filter</filter-name>
+      <filter-class>org.apache.catalina.filters.RemoteAddrFilter</filter-class>
+      <init-param>
+        <param-name>allow</param-name>
+        <param-value>127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1</param-value>
+      </init-param>
+    </filter>
+    <filter-mapping>
+      <filter-name>Remote Address Filter</filter-name>
+      <url-pattern>/*</url-pattern>              <----- watch out: this URL must not contain the context
+    </filter-mapping>
+```
+
+
+#### 2 For the my app only
+
+in my app's web.xml file
+```xml
+<filter>
+      <filter-name>Remote Address Filter</filter-name>
+      <filter-class>org.apache.catalina.filters.RemoteAddrFilter</filter-class>
+      <init-param>
+        <param-name>allow</param-name>
+        <param-value>127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1</param-value>
+      </init-param>
+    </filter>
+    <filter-mapping>
+      <filter-name>Remote Address Filter</filter-name>
+      <url-pattern>/*</url-pattern>              <----- watch out: this URL must not contain the context
+    </filter-mapping>
+```
+
 
 
 
