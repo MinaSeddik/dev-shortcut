@@ -7,7 +7,7 @@
 - [Agile Methodology](Agile/agile.md)
 - [Java](Java/java.md)
 - [Spring](Spring/README.md)
-- [cglib - *Code generation library*]()
+- [JDK dynamic proxy and CGLIB proxy](JDK_dynamic_proxy_and_CGLIB_proxy/README.md)
 - [Maven Build Automation](Maven/README.md)
 - [Git](Git/README.md)
 - [Cryptography](Cryptography/README.md)
@@ -30,7 +30,7 @@
   - Kafka  
   - RabitMQ
 - Zookeeper
-- Logging - *best practices*
+- [Logging](Logger/README.md)
 - [Tomcat Server](Tomcat/README.md)
 - Apache Web Server
 - Nginix Server

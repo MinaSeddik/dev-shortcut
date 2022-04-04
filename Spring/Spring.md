@@ -6,18 +6,23 @@
   - [Configuring Beans in the Container](#configuring_beans)
   - [Types of ApplicationContext](#applicationContext_types)
 - [ContextLoaderListener vs DispatcherServlet](#listener_servlet_dispatcher)  
-- **Best Practice:** Project Structure and Naming Convension
+- **Best Practice:** Project Structure and Naming Convention
+
+
+- @Configuration @ComponantScan and @Bean
+- @Autowire, @Qualifier, @Primary and @Required
+- @Componant, @Service and @Repository
 - @Lazy loading vs @Eager Loading
+
+- @Controller, @ResponseBody vs @RestController
 - @Scope
 - @Profile - *Handling different config file (local, dev, qa, uat, prod)*
 - @Async
 - @Scheduled
 - @Value
 - @Transaction
-- @Autowire, @Qualifier, @Primary and @Required
-- @Componant, @Service and @Repository 
-- @Conroller, @ResponseBody vs @RestController
-- @Configuration @ComponantScan and @Bean
+ 
+
 - @Condition and @ConditionOnProperty
 - @PostConstractor
 - @InitBinder
