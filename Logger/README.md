@@ -8,6 +8,7 @@
 - [RollingFileAppender](#rolling_file_appender)
 - [Delete old logs with log4j2](#delete_logs)
 - [SMTPAppender](#SMTP_appender)
+- [Change Log Level Programmatically](#change_log_level_programmatically)
 
 
 ## <a name='SLF4J'> Simple Logging Facade for Java (SLF4J) </a>
@@ -556,3 +557,18 @@ If the email will be sent from **gmail** account, then this account should confi
 
 
 
+
+## <a name='change_log_level_programmatically'> Change Log Level Programmatically </a>
+
+
+
+
+```java
+        LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
+        Configuration config = loggerContext.getConfiguration();
+//        LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+        LoggerConfig loggerConfig = config.getLoggerConfig("logging");
+        loggerConfig.setLevel(Level.DEBUG);
+        loggerContext.updateLoggers();  // This causes all Loggers to refetch information from their LoggerConfig.
+        
+```
