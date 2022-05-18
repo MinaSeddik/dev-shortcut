@@ -7,27 +7,38 @@
   - [Types of ApplicationContext](#applicationContext_types)
 - [ContextLoaderListener vs DispatcherServlet](#listener_servlet_dispatcher)  
 - **Best Practice:** Project Structure and Naming Convention
+- [@Configuration @ComponantScan and @Bean](#configuration_componantScan_bean)  
+- [@Componant, @Controller, @Service and @Repository](#componant_controller_service_repository)
 
 
-- @Configuration @ComponantScan and @Bean
+- [Conditions](#conditions)     <----- should be moved to spring-boot
+- [@Valid](#valid)
+
+@ControllerAdvice, @JsonComponent, Converter,
+GenericConverter, Filter, and HandlerMethodArgumentResolver;
+
+- @Import and @ImportResource
+
+- [@DependsOn](#depends_on)
 - @Autowire, @Qualifier, @Primary and @Required
-- @Componant, @Service and @Repository
 - @Lazy loading vs @Eager Loading
-
-- @Controller, @ResponseBody vs @RestController
 - @Scope
-- @Profile - *Handling different config file (local, dev, qa, uat, prod)*
+- @Profile and @ActiveProfiles - *Handling different config file (local, dev, qa, uat, prod)*
 - @Async
 - @Scheduled
-- @Value
 - @Transaction
- 
-
-- @Condition and @ConditionOnProperty
 - @PostConstractor
 - @InitBinder
-- @RequestParam vs @PathVariable
+- @Order
+- @PropertySource , @PropertySources and @Value
+- @ControllerAdvice or @ExceptionHandler
+
+- @ContextConfiguration
+- @ExtendWith
+
 - HttpMessageConverter 
+- Error Handling
+- Spring startup class
 
 
 ## <a name='ioc_dependency_injection'> IoC Containers and Dependency Injection </a>
@@ -288,4 +299,314 @@ if(ac == null){
 
 For more details about ContextLoaderListener and DispatcherServlet;   
 check out [tomcat web container listener](../Tomcat/README.md#listener) and [tomcat web container servlet](../Tomcat/README.md#servlet)
+
+
+## <a name='configuration_componantScan_bean'> @Configuration @ComponantScan and @Bean </a>
+
+#### @Configuration
+This annotation marks a class as a Configuration class for Java-based configuration. This is particularly important if you favor Java-based configuration over XML configuration.
+
+#### @Bean
+Configuration classes can contain bean definition methods annotated with @Bean:
+
+```gitignore
+@Configuration
+class VehicleFactoryConfig {
+
+    @Bean
+    Engine engine() {
+        return new Engine();
+    }
+
+}
+```
+
+#### @ComponentScan
+This annotation enables component-scanning so that the web controller classes and other components you create will be automatically discovered and registered as beans in Spring's Application Context. All the @Controller, @Service, @Repository and @Componant classes you write are discovered by this annotation.
+
+```
+@Configuration
+@ComponentScan(basePackages = "com.baeldung.annotations")
+class VehicleFactoryConfig {}
+```
+
+```
+@Configuration
+@ComponentScan(basePackageClasses = VehicleFactoryConfig.class)
+class VehicleFactoryConfig {}
+```
+
+```
+@Configuration
+@ComponentScan(basePackages = "com.baeldung.annotations")
+@ComponentScan(basePackageClasses = VehicleFactoryConfig.class)
+class VehicleFactoryConfig {}
+```
+
+
+```
+@Configuration
+@ComponentScans({ 
+  @ComponentScan(basePackages = "com.baeldung.annotations"), 
+  @ComponentScan(basePackageClasses = VehicleFactoryConfig.class)
+})
+class VehicleFactoryConfig {}
+```
+
+
+## <a name='componant_controller_service_repository'> @Componant, @Controller, @Service and @Repository </a>
+
+#### @Component
+@Component is a class level annotation. During the component scan, Spring Framework automatically detects classes annotated with @Component:
+
+```
+@Component
+class CarUtility {
+    // ...
+}
+```
+
+By default, the bean instances of this class have the same name as the class name with a lowercase initial. In addition, we can specify a different name using the optional value argument of this annotation.
+
+Since @Repository, @Service, @Configuration, and @Controller are all meta-annotations of @Component, they share the same bean naming behavior. Spring also automatically picks them up during the component scanning process.
+
+#### @Controller
+It is a spring annotation, However It's used in Spring MVC to define controller, which are first Spring bean and then the controller.
+
+
+#### @Repository
+
+DAO or Repository classes usually represent the database access layer in an application, and should be annotated with @Repository:
+
+```
+@Repository
+class VehicleRepository {
+    // ...
+}
+```
+
+One advantage of using this annotation is that it has automatic persistence exception translation enabled. When using a persistence framework, such as Hibernate, native exceptions thrown within classes annotated with @Repository will be automatically translated into subclasses of Spring's DataAccessExeption.
+
+To enable exception translation, we need to declare our own PersistenceExceptionTranslationPostProcessor bean:
+```
+@Bean
+public PersistenceExceptionTranslationPostProcessor exceptionTranslation() {
+    return new PersistenceExceptionTranslationPostProcessor();
+}
+```
+
+#### @Service
+
+The business logic of an application usually resides within the service layer, so we’ll use the @Service annotation to indicate that a class belongs to that layer:
+```
+@Service
+public class VehicleService {
+    // ...    
+}
+```
+
+
+## <a name='conditions'> Conditions </a>
+
+#### @ConditionalOnClass
+
+Using these conditions, Spring will only use the marked auto-configuration bean if the class in the annotation's argument is present/absent:
+```
+@Configuration
+@ConditionalOnClass(DataSource.class)
+class MySQLAutoconfiguration {
+    //...
+}
+```
+
+#### @ConditionalOnBean and @ConditionalOnMissingBean
+
+We can use these annotations when we want to define conditions based on the presence or absence of a specific bean:
+```
+@Bean
+@ConditionalOnBean(name = "dataSource")
+LocalContainerEntityManagerFactoryBean entityManagerFactory() {
+    // ...
+}
+```
+
+#### @ConditionalOnProperty
+
+With this annotation, we can make conditions on the values of properties:
+```
+@Bean
+@ConditionalOnProperty(
+    name = "usemysql", 
+    havingValue = "local"
+)
+DataSource dataSource() {
+    // ...
+}
+```
+
+#### @ConditionalOnResource
+
+We can make Spring to use a definition only when a specific resource is present:
+```
+@ConditionalOnResource(resources = "classpath:mysql.properties")
+Properties additionalProperties() {
+    // ...
+}
+```
+
+#### @ConditionalOnWebApplication and @ConditionalOnNotWebApplication
+
+With these annotations, we can create conditions based on if the current application is or isn't a web application:
+```
+@ConditionalOnWebApplication
+HealthCheckController healthCheckController() {
+    // ...
+}
+```
+
+#### @ConditionalExpression
+
+We can use this annotation in more complex situations. Spring will use the marked definition when the SpEL expression is evaluated to true:
+```
+@Bean
+@ConditionalOnExpression("${usemysql} && ${mysqlserver == 'local'}")
+DataSource dataSource() {
+    // ...
+}
+```
+
+#### @Conditional
+
+For even more complex conditions, we can create a class evaluating the custom condition. We tell Spring to use this custom condition with @Conditional:
+```
+@Service
+@Conditional(Java8Condition.class)
+public class Java8DependedService {
+    // ...
+}
+```
+
+It's used to indicate whether a given component is eligible for registration based on a defined condition.
+
+
+```gitignore
+class Java8Condition implements Condition {
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        return JavaVersion.getJavaVersion().equals(JavaVersion.EIGHT);
+    }
+}
+```
+
+- Combining Conditions
+```gitignore
+class Java8OrJava9 extends AnyNestedCondition {
+    
+    Java8OrJava9() {
+        super(ConfigurationPhase.REGISTER_BEAN);
+    }
+    
+    @Conditional(Java8Condition.class)
+    static class Java8 { }
+    
+    @Conditional(Java9Condition.class)
+    static class Java9 { }
+    
+}
+```
+
+```
+@Service
+@Conditional({IsWindowsCondition.class, Java8Condition.class})
+@ConditionalOnJava(JavaVersion.EIGHT)
+public class LoggingService {
+    // ...
+}
+```
+
+
+
+##### Declaring Conditions
+The most common usage would be to include or exclude the whole configuration class:
+```
+@Configuration
+@Conditional(IsDevEnvCondition.class)
+class DevEnvLoggingConfiguration {
+    // ...
+}
+```
+
+Or just a single bean:
+```
+@Configuration
+class DevEnvLoggingConfiguration {
+    
+    @Bean
+    @Conditional(IsDevEnvCondition.class)
+    LoggingService loggingService() {
+        return new LoggingService();
+    }
+}
+```
+
+By doing so, we can base the behavior of our application on given conditions. For instance, the type of environment or specific needs of our clients. In the above example, we initialize additional logging services only for the development environment.
+
+Another way of making the component conditional would be to place the condition directly on the component class:
+
+```
+@Service
+@Conditional(IsDevEnvCondition.class)
+class LoggingService {
+    // ...
+}
+```
+
+##### more examples: 
+```
+@Service
+@ConditionalOnProperty(
+  value="logging.enabled", 
+  havingValue = "true", 
+  matchIfMissing = true)
+class LoggingService {
+    // ...
+}
+```
+
+```
+@Service
+@ConditionalOnExpression(
+  "${logging.enabled:true} and '${logging.level}'.equals('DEBUG')"
+)
+class LoggingService {
+    // ...
+}
+```
+
+```
+@Service
+@ConditionalOnBean(CustomLoggingConfiguration.class)
+class LoggingService {
+    // ...
+}
+```
+
+```
+@Service
+@ConditionalOnJava(JavaVersion.EIGHT)
+class LoggingService {
+    // ...
+}
+```
+
+```
+@Configuration
+@ConditionalOnWarDeployment
+class AdditionalWebConfiguration {
+    // ...
+}
+```
+
+
+
 

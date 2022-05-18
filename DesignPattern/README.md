@@ -25,10 +25,8 @@ Here is **ALL** Design Patterns based on **Head First Design Patterns**
 - [Memento Pattern](#memento_pattern)
 - [Prototype Pattern](#prototype_pattern)
 - [Visitor Pattern](#visitor_pattern)
-
-
-
-
+---
+- [SOLID Principles](#solid_principles)
 
 
 
@@ -160,4 +158,23 @@ Here is **ALL** Design Patterns based on **Head First Design Patterns**
 
 ![Visitor Design Pattern](./Visitor.png)
 
+
+
+## <a name='solid_principles'> SOLID Principles </a>
+
+- The **S**ingle Responsibility Principle 
+    - there must be ONLY ONE REASON to make changes there. 
+    - The function must be testable.
+- The **O**pen-Closed Principle
+    - the class must be closed to modification and open to extension.
+    - New class functionality should be added to an existing class through inheritance, and not by modifying the existing one.
+- The **L**iskov Substitution Principle
+    - If you have a function or class X using class A, then the replacement of class A by any of its subclasses should not break the function of X.
+- The **I**nterface Segregation Principle
+    - No code should be forced to depend on methods it does not use.
+- The **D**ependency Inversion Principle
+    - classes should depend on abstractions, not on specific implementations of those abstractions.
+    
+    
+    
 

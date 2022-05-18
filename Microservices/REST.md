@@ -173,7 +173,8 @@ there are 3 main types of case conventions:
     ```
 
 - HTTP response 
-    - HTTP code **200 (OK)** if the entity is being send in the payload OR **204 (No Content)** in case of no need to send response in payload
+    - HTTP code **200 (OK)** if the entity is being send in the payload 
+    OR **204 (No Content)** in case of no need to send response in payload
 
 
 #### Replacing a Resource at a URL known by the client.

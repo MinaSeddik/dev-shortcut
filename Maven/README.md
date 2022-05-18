@@ -8,6 +8,7 @@
 - [Maven Repository](#repository)
 - [Maven Snapshots](#snapshots)
 - [Manage Dependencies](#dependencies)
+- [&lt;dependencyManagement&gt; vs &lt;dependencies&gt; tags](#dependencv_mngmt)
 - [Change version from snapshot to release](#change_version)
 - [Java web application project structure](#project_structure)
 
@@ -443,6 +444,41 @@ mvn clean package -U
 | 6            | **import** <br/><br/>    This scope is only used when dependency is of type pom. This scope indicates that the specified POM should be replaced with the dependencies in that POM's <dependencyManagement> section.                    |
 
 
+## <a name='dependencv_mngmt'> &lt;dependencyManagement&gt; vs &lt;dependencies&gt; tags </a>
+
+In general, we use the dependencyManagement tag to avoid repeating the version 
+
+In the parent POM, the main difference between the **&lt;dependencies&gt;** and **&lt;dependencyManagement&gt;** is this:
+
+Artifacts specified in the **&lt;dependencies&gt;** section will ALWAYS be included as a dependency of the child module(s).
+
+Artifacts specified in the **&lt;dependencyManagement&gt;** section, will only be included in the child module if they were also specified in the <dependencies> section of the child module itself. Why is it good you ask? Because you specify the version and/or scope in the parent, and you can leave them out when specifying the dependencies in the child POM. This can help you use unified versions for dependencies for child modules, without specifying the version in each child module.
+
+A parent project (Pro-par) defines a dependency under the dependencyManagement:
+```xml
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8</version>
+    </dependency>
+ </dependencies>
+</dependencyManagement>
+```
+The above code just declares the new artifact junit, but it doesn't really add it to the project dependency resource list.
+
+
+Then in the child of Pro-par, I can use the junit:
+```xml
+<dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+ </dependencies>
+```
+The version and scope tags can be inherited implicitly if we have used the dependencyManagement tag before in the POM file:
 
 ## <a name='change_version'> Change version from snapshot to release </a>
 
