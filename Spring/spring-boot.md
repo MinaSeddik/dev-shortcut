@@ -17,6 +17,7 @@
 - RestTemplate  vs TestRestTemplate 
 - Tomcat configuration (port, ssl, context path, ...)
 - CommandLineRunner 
+- Unit test in details
 - move condional annotation here ....
 
 

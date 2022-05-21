@@ -1,5 +1,6 @@
 # Spring MVC
 
+
 - [spring-web vs spring-webmvc](#spring-web_vs_spring-webmvc) 
 - [@Controller vs @RestController](#controller_restController)   
 - [@EnableWebMvc](#enableWebMvc)
@@ -13,7 +14,10 @@
 - [@ExceptionHandler vs @ControllerAdvice - Spring Error Handling](#exceptionHandler_controllerAdvice)      
 - [GET, POST, PUT, DELETE Best Practices using Spring](#get_post_put_delete)      
 - [Validation](#spring_validation)      
-
+- [Unit test](#unit_test)      
+- [Running Logic on Startup](#Running_Logic_on_Startup)   
+- [@Async and @EnableAsync](#Async_EnableAsync)      
+- [@Scheduled and @EnableScheduling](#Scheduled_EnableScheduling)      
 
 
 ## <a name='spring-web_vs_spring-webmvc'> spring-web vs spring-webmvc </a>
@@ -1505,3 +1509,703 @@ public class ApiExceptionHandler {
         }
     }
 ```
+
+
+## <a name='unit_test'> Unit test using spring (Complex and I'd rather use spring-boot test) </a>
+
+Every unit test which we write to test the behavior of a controller method consists of these steps:
+
+- We send a request to the tested controller method.
+- We verify that we received the expected response.
+
+
+```java
+@Controller
+public class TodoController {
+ 
+    private final TodoService service;
+     
+    @RequestMapping(value = "/", method = RequestMethod.GET)
+    public String findAll(Model model) {
+        List<Todo> models = service.findAll();
+        model.addAttribute("todos", models);
+        return "todo/list";
+    }
+}
+```
+
+
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = {TestContext.class, WebAppContext.class})
+@WebAppConfiguration
+public class TodoControllerTest {
+ 
+    private MockMvc mockMvc;
+ 
+//    @Autowired
+    @Mock
+    private TodoService todoServiceMock;
+ 
+    //Add WebApplicationContext field here
+
+
+     @Before
+      public void setUp() {
+        MockitoAnnotations.initMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(new TodoController())
+                .build();
+      }
+     
+    @Test
+    public void findAll_ShouldAddTodoEntriesToModelAndRenderTodoListView() throws Exception {
+        Todo first = new TodoBuilder()
+                .id(1L)
+                .description("Lorem ipsum")
+                .title("Foo")
+                .build();
+ 
+        Todo second = new TodoBuilder()
+                .id(2L)
+                .description("Lorem ipsum")
+                .title("Bar")
+                .build();
+ 
+        when(todoServiceMock.findAll()).thenReturn(Arrays.asList(first, second));
+ 
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("todo/list"))
+                .andExpect(forwardedUrl("/WEB-INF/jsp/todo/list.jsp"))
+                .andExpect(model().attribute("todos", hasSize(2)))
+                .andExpect(model().attribute("todos", hasItem(
+                        allOf(
+                                hasProperty("id", is(1L)),
+                                hasProperty("description", is("Lorem ipsum")),
+                                hasProperty("title", is("Foo"))
+                        )
+                )))
+                .andExpect(model().attribute("todos", hasItem(
+                        allOf(
+                                hasProperty("id", is(2L)),
+                                hasProperty("description", is("Lorem ipsum")),
+                                hasProperty("title", is("Bar"))
+                        )
+                )));
+ 
+        verify(todoServiceMock, times(1)).findAll();
+        verifyNoMoreInteractions(todoServiceMock);
+    }
+}
+```
+
+- **@RunWith(SpringJUnit4ClassRunner.class)**: Indicates that the class should use Spring's JUnit facilities.
+- **@ContextConfiguration(locations = {...})**: Indicates which XML files contain the ApplicationContext.
+
+If you are using annotations rather than XML files, 
+then any class that you are unit testing that requires Spring dependency injection needs to be put into the **@ContextConfiguration** annotation. For example:
+
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = TestContext.class)
+class TodoControllerTest {
+    
+    @Autowired
+    private TodoService todoServiceMock;
+
+
+}
+```
+
+
+**TestContext**: Returns all beans, which are required for the test. 
+Use Mockito to mock the depedencies of your controller, because we want to test only the controller and not the service layer.
+
+
+example:
+```java
+@Configuration
+public class TestContext {
+ 
+    @Bean
+    public MessageSource messageSource() {
+        ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
+ 
+        messageSource.setBasename("i18n/messages");
+        messageSource.setUseCodeAsDefaultMessage(true);
+ 
+        return messageSource;
+    }
+ 
+    @Bean
+    public TodoService todoService() {
+        return Mockito.mock(TodoService.class);
+    }
+}
+```
+
+
+### Unit test Using spring boot
+```java
+@RunWith(SpringRunner.class) 
+@WebMvcTest
+@AutoConfigureMockMvc
+public class UserControllerIntegrationTest {
+
+    @MockBean
+    private UserRepository userRepository;
+    
+    @Autowired
+    UserController userController;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    //...
+    @Test
+    public void whenPostRequestToUsersAndValidUser_thenCorrectResponse() throws Exception {
+        MediaType textPlainUtf8 = new MediaType(MediaType.TEXT_PLAIN, Charset.forName("UTF-8"));
+        String user = "{\"name\": \"bob\", \"email\" : \"bob@domain.com\"}";
+        mockMvc.perform(MockMvcRequestBuilders.post("/users")
+          .content(user)
+          .contentType(MediaType.APPLICATION_JSON_UTF8))
+          .andExpect(MockMvcResultMatchers.status().isOk())
+          .andExpect(MockMvcResultMatchers.content()
+            .contentType(textPlainUtf8));
+    }
+    
+    @Test
+    public void whenPostRequestToUsersAndInValidUser_thenCorrectResponse() throws Exception {
+        String user = "{\"name\": \"\", \"email\" : \"bob@domain.com\"}";
+        mockMvc.perform(MockMvcRequestBuilders.post("/users")
+          .content(user)
+          .contentType(MediaType.APPLICATION_JSON_UTF8))
+          .andExpect(MockMvcResultMatchers.status().isBadRequest())
+          .andExpect(MockMvcResultMatchers.jsonPath("$.name", Is.is("Name is mandatory")))
+          .andExpect(MockMvcResultMatchers.content()
+            .contentType(MediaType.APPLICATION_JSON_UTF8));
+        }
+
+    @Test
+    public void givenSaveBasicInfo_whenCorrectInput_thenSuccess() throws Exception {
+        this.mockMvc.perform(MockMvcRequestBuilders.post("/saveBasicInfo")
+          .accept(MediaType.TEXT_HTML)
+          .param("name", "test123")
+          .param("password", "pass"))
+          .andExpect(view().name("success"))
+          .andExpect(status().isOk())
+          .andDo(print());
+    }
+
+    @Test
+    public void givenSaveBasicInfoStep1_whenCorrectInput_thenSuccess() throws Exception {
+        this.mockMvc.perform(MockMvcRequestBuilders.post("/saveBasicInfoStep1")
+          .accept(MediaType.TEXT_HTML)
+          .param("name", "test123")
+          .param("password", "pass"))
+          .andExpect(view().name("success"))
+          .andExpect(status().isOk())
+          .andDo(print());
+    }
+
+    @Test
+    public void 
+      givenPhoneURIWithPostAndFormData_whenMockMVC_thenVerifyErrorResponse() {
+     
+        this.mockMvc.perform(MockMvcRequestBuilders.post("/addValidatePhone").
+          accept(MediaType.TEXT_HTML).
+          param("phoneInput", "123")).
+          andExpect(model().attributeHasFieldErrorCode(
+              "validatedPhone","phone","ContactNumberConstraint")).
+          andExpect(view().name("phoneHome")).
+          andExpect(status().isOk()).
+          andDo(print());
+    }
+}
+```
+
+
+## <a name='Running_Logic_on_Startup'> Running Logic on Startup </a>
+
+
+In order to benefit from Inverse of Control, we need to renounce partial control over the application's flow to the container. This is why instantiation, setup logic on startup, etc. need special attention.
+
+#### @PostConstruct Annotation
+
+```
+@Component
+public class PostConstructExampleBean {
+
+    private static final Logger LOG = Logger.getLogger(PostConstructExampleBean.class);
+
+    @Autowired
+    private Environment environment;
+
+    @PostConstruct
+    public void init() {
+        LOG.info(Arrays.asList(environment.getDefaultProfiles()));
+    }
+}
+```
+
+We can see that the Environment instance was safely injected and then called in the @PostConstruct annotated method without throwing a NullPointerException.
+
+
+#### The InitializingBean Interface
+
+The InitializingBean approach works in a similar way. Instead of annotating a method, we need to implement the InitializingBean interface and the afterPropertiesSet() method.
+
+```java
+@Component
+public class InitializingBeanExampleBean implements InitializingBean {
+
+    private static final Logger LOG 
+      = Logger.getLogger(InitializingBeanExampleBean.class);
+
+    @Autowired
+    private Environment environment;
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        LOG.info(Arrays.asList(environment.getDefaultProfiles()));
+    }
+}
+```
+
+#### An ApplicationListener
+
+We can use this approach for **running logic after the Spring context has been initialized**. So, we aren't focusing on any particular bean. We're instead waiting for all of them to initialize.
+
+```java
+@Component
+public class StartupApplicationListenerExample implements ApplicationListener<ContextRefreshedEvent> {
+
+    private static final Logger LOG = Logger.getLogger(StartupApplicationListenerExample.class);
+
+    public static int counter;
+
+    @Override public void onApplicationEvent(ContextRefreshedEvent event) {
+        LOG.info("Increment counter");
+        counter++;
+    }
+}
+```
+
+We can get the same results by using the newly introduced @EventListener annotation:
+
+```java
+@Component
+public class EventListenerExampleBean {
+
+    private static final Logger LOG = Logger.getLogger(EventListenerExampleBean.class);
+
+    public static int counter;
+
+    @EventListener
+    public void onApplicationEvent(ContextRefreshedEvent event) {
+        LOG.info("Increment counter");
+        counter++;
+    }
+}
+```
+
+#### @Bean initMethod Attribute
+
+We can use the initMethod property to run a method after a bean's initialization.
+
+```java
+public class InitMethodExampleBean {
+
+    private static final Logger LOG = Logger.getLogger(InitMethodExampleBean.class);
+
+    @Autowired
+    private Environment environment;
+
+    public void init() {
+        LOG.info(Arrays.asList(environment.getDefaultProfiles()));
+    }
+}
+```
+
+Then we can define the bean using the @Bean annotation:
+```java
+@Bean(initMethod="init")
+public InitMethodExampleBean initMethodExampleBean() {
+    return new InitMethodExampleBean();
+}
+```
+
+
+#### Spring Boot CommandLineRunner
+
+Spring Boot provides a CommandLineRunner interface with a callback run() method. This can be invoked at **application startup after the Spring application context is instantiated.**
+
+```java
+@Component
+public class CommandLineAppStartupRunner implements CommandLineRunner {
+    private static final Logger LOG =
+      LoggerFactory.getLogger(CommandLineAppStartupRunner.class);
+
+    public static int counter;
+
+    @Override
+    public void run(String...args) throws Exception {
+        LOG.info("Increment counter");
+        counter++;
+    }
+}
+```
+
+#### Spring Boot ApplicationRunner
+
+```java
+@Component
+public class AppStartupRunner implements ApplicationRunner {
+    private static final Logger LOG =
+      LoggerFactory.getLogger(AppStartupRunner.class);
+
+    public static int counter;
+
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        LOG.info("Application started with option names : {}", 
+          args.getOptionNames());
+        LOG.info("Increment counter");
+        counter++;
+    }
+}
+```
+
+
+#### Combining Mechanisms
+
+1. constructor
+2. @PostConstruct annotated methods
+3. InitializingBean's afterPropertiesSet() method
+4. initialization method specified as init-method in XML
+
+```java
+@Component
+@Scope(value = "prototype")
+public class AllStrategiesExampleBean implements InitializingBean {
+
+    private static final Logger LOG 
+      = Logger.getLogger(AllStrategiesExampleBean.class);
+
+    public AllStrategiesExampleBean() {
+        LOG.info("Constructor");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        LOG.info("InitializingBean");
+    }
+
+    @PostConstruct
+    public void postConstruct() {
+        LOG.info("PostConstruct");
+    }
+
+    public void init() {
+        LOG.info("init-method");
+    }
+}
+```
+
+If we try to instantiate this bean, we can see logs that match the order specified above:
+
+```
+[main] INFO o.b.startup.AllStrategiesExampleBean - Constructor
+[main] INFO o.b.startup.AllStrategiesExampleBean - PostConstruct
+[main] INFO o.b.startup.AllStrategiesExampleBean - InitializingBean
+[main] INFO o.b.startup.AllStrategiesExampleBean - init-method
+```
+
+
+
+## <a name='Async_EnableAsync'> @Async and @EnableAsync </a>
+
+It is asynchronous execution support in Spring.  
+Simply put, annotating a method of a bean with @Async will make it execute in a separate thread. In other words, the caller will not wait for the completion of the called method.
+
+enabling asynchronous processing with Java configuration using **@EnableAsync**
+
+```java
+@Configuration
+@EnableAsync
+public class SpringAsyncConfig { ... }
+```
+
+for xml configuration
+```xml
+<task:executor id="myexecutor" pool-size="5"  />
+<task:annotation-driven executor="myexecutor"/>
+```
+
+#### Async Rules - @Async has two limitations:
+
+- **It must be applied to public methods only.**
+- **Self-invocation — calling the async method from within the same class — won't work.**
+
+The reasons are simple: The method needs to be public so that it can be proxied. And self-invocation doesn't work because it bypasses the proxy and calls the underlying method directly.
+
+
+#### Methods With Void Return Type
+```java
+@Async
+public void asyncMethodWithVoidReturnType() {
+    System.out.println("Execute method asynchronously. " 
+      + Thread.currentThread().getName());
+}
+```
+
+#### Methods With Return Type
+```java
+@Async
+public Future<String> asyncMethodWithReturnType() {
+    System.out.println("Execute method asynchronously - " + Thread.currentThread().getName());
+    try {
+        Thread.sleep(5000);
+        return new AsyncResult<String>("hello world !!!!");
+    } catch (InterruptedException e) {
+        //
+    }
+
+    return null;
+}
+```
+
+Spring also provides an AsyncResult class that implements Future. We can use this to track the result of asynchronous method execution.
+
+```java
+public void testAsyncAnnotationForMethodsWithReturnType()
+  throws InterruptedException, ExecutionException {
+    System.out.println("Invoking an asynchronous method. " 
+      + Thread.currentThread().getName());
+    Future<String> future = asyncAnnotationExample.asyncMethodWithReturnType();
+
+    while (true) {
+        if (future.isDone()) {
+            System.out.println("Result from asynchronous process - " + future.get());
+            break;
+        }
+        System.out.println("Continue doing something else. ");
+        Thread.sleep(1000);
+    }
+}
+```
+
+
+#### The Executor
+
+Override the Executor at the Application Level
+
+```java
+@Configuration
+@EnableAsync
+public class SpringAsyncConfig implements AsyncConfigurer {
+    
+    @Override
+    public Executor asyncExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(3);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("AsynchThread-");
+        executor.initialize();
+        return executor;
+      }
+
+}
+```
+
+#### Exception Handling
+
+When a method return type is a Future, exception handling is easy. Future.get() method will throw the exception.
+
+But if the return type is void, exceptions will not be propagated to the calling thread. So, we need to add extra configurations to handle exceptions.
+
+```java
+public class CustomAsyncExceptionHandler implements AsyncUncaughtExceptionHandler {
+
+    @Override
+    public void handleUncaughtException(Throwable throwable, Method method, Object... obj) {
+ 
+        System.out.println("Exception message - " + throwable.getMessage());
+        System.out.println("Method name - " + method.getName());
+        for (Object param : obj) {
+            System.out.println("Parameter value - " + param);
+        }
+    }
+    
+}
+```
+
+Now, register the CustomAsyncExceptionHandler in the above SpringAsyncConfig:
+```java
+@Configuration
+@EnableAsync
+public class SpringAsyncConfig implements AsyncConfigurer {
+    
+    @Override
+    public Executor asyncExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(3);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("AsynchThread-");
+        executor.initialize();
+        return executor;
+      }
+
+    @Override
+    public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
+        return new CustomAsyncExceptionHandler();
+    }
+
+}
+```
+
+
+
+## <a name='Scheduled_EnableScheduling'> @Scheduled and @EnableScheduling </a>
+
+The simple rules that we need to follow to annotate a method with @Scheduled are:
+- the method should typically have a void return type (if not, the returned value will be ignored)
+- the method should not expect any parameters
+
+To enable support for scheduling tasks and the @Scheduled annotation in Spring,
+```java
+@Configuration
+@EnableScheduling
+public class SpringConfig {
+    ...
+}
+```
+
+we can do the same in XML:
+```xml
+<task:annotation-driven>
+```
+
+
+#### Schedule a Task at Fixed Delay
+
+configuring a task to run after a fixed delay:
+
+```java
+@Scheduled(fixedDelay = 1000)
+public void scheduleFixedDelayTask() {
+    System.out.println(
+      "Fixed delay task - " + System.currentTimeMillis() / 1000);
+}
+```
+
+In this case, the duration between the end of the last execution and the start of the next execution is fixed. The task always waits until the previous one is finished.
+
+This option should be used when it’s mandatory that the previous execution is completed before running again.
+
+
+
+
+
+#### Schedule a Task at a Fixed Rate
+
+execute a task at a fixed interval of time:
+```java
+@Scheduled(fixedRate = 1000)
+public void scheduleFixedRateTask() {
+    System.out.println(
+      "Fixed rate task - " + System.currentTimeMillis() / 1000);
+}
+```
+
+This option should be used when each execution of the task is independent.
+
+Note that scheduled tasks don't run in parallel by default. So even if we used fixedRate, the next task won't be invoked until the previous one is done.
+
+
+Note:
+**If we want to support parallel behavior in scheduled tasks, we need to add the @Async annotation:**
+```java
+@EnableAsync
+public class ScheduledFixedRateExample {
+    @Async
+    @Scheduled(fixedRate = 1000)
+    public void scheduleFixedRateTaskAsync() throws InterruptedException {
+        System.out.println(
+          "Fixed rate task async - " + System.currentTimeMillis() / 1000);
+        Thread.sleep(2000);
+    }
+
+}
+```
+
+#### Fixed Rate vs Fixed Delay
+
+The **fixedDelay** property makes sure that there is a delay of n millisecond between the finish time of an execution of a task and the start time of the next execution of the task.
+
+The **fixedRate** property runs the scheduled task at every n millisecond. It doesn't check for any previous executions of the task.
+
+#### Schedule a Task With Initial Delay
+```java
+@Scheduled(fixedDelay = 1000, initialDelay = 1000)
+public void scheduleFixedRateWithInitialDelayTask() {
+ 
+    long now = System.currentTimeMillis() / 1000;
+    System.out.println(
+      "Fixed rate task with one second initial delay - " + now);
+}
+```
+
+The task will be executed the first time after the initialDelay value, and it will continue to be executed according to the fixedDelay.
+
+#### Schedule a Task Using Cron Expressions
+
+```java
+@Scheduled(cron = "0 15 10 15 * ?")
+public void scheduleTaskUsingCronExpression() {
+ 
+    long now = System.currentTimeMillis() / 1000;
+    System.out.println("schedule tasks using cron jobs - " + now);
+}
+```
+Note that in this example, we're scheduling a task to be executed at 10:15 AM on the 15th day of every month.
+
+By default, Spring will use the server's local time zone for the cron expression. However, we can use the zone attribute to change this timezone:
+
+> @Scheduled(cron = "0 15 10 15 * ?", zone = "Europe/Paris")
+
+
+#### Parameterizing the Schedule
+
+> @Scheduled(fixedDelayString = "${fixedDelay.in.milliseconds}")
+
+> @Scheduled(fixedRateString = "${fixedRate.in.milliseconds}")
+
+> @Scheduled(cron = "${cron.expression}")
+
+
+#### EnableScheduling configuration
+
+```java
+@Configuration
+@EnableScheduling
+public class MySpringConfig {
+
+    @Bean
+    public TaskScheduler  taskScheduler() {
+        ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
+        threadPoolTaskScheduler.setPoolSize(5);
+        threadPoolTaskScheduler.setThreadNamePrefix("ThreadPoolTaskScheduler");
+        return threadPoolTaskScheduler;
+    }
+
+}
+```
+
+#### Using Spring Boot
+
+> spring.task.scheduling.pool.size=5
+
+

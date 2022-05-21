@@ -10,7 +10,7 @@
 - [Install SSL certificate for tomcat server](#tomcat_ca_signed_certificate)
 - [Using Apache httpclient for https](#apache_httpclient)
 - [Java Certificate Truststore](#java_trusted_truststore)
-
+- [What are the differences between .pem, .cer and .der?](#pem_cer_der)
 
 
 ## <a name='apache_httpclient'> Using Apache httpclient for https </a>  
@@ -427,7 +427,30 @@ Protocol authhttps = new Protocol("https",
   > **readlink** - display value of a symbolic link
   
       
+## <a name='pem_cer_der'> What are the differences between .pem, .cer and .der? </a>
 
+.pem, .cer and .der are all file extensions for files that may contain a X.509 v3 certificate.
 
+##### The .der extension
+DER is the method of encoding the data that makes up the certificate. DER itself could represent any kind of data, but usually it describes an encoded certificate or a CMS container.
+
+The structure of a certificate is described using the ASN.1 data representation language. BER and DER are binary encoding methods for data described by ASN.1.
+
+##### The .pem extension
+PEM is a method of encoding binary data as a string (ASCII armor). It contains a header and a footer line (specifying the type of data that is encoded and showing begin/end if the data is chained together) and the data in the middle is the base 64 data. In the case that it encodes a certificate it would simply contain the base 64 encoding of the DER certificate. PEM stands for Privacy Enhanced Mail; mail cannot contain un-encoded binary values such as DER directly.
+
+PEM may also encode / protect other kinds of data that is related to certificates such as public / private keys, certificate requests, etc. If the contents are a common X509v3 certificate then the PEM is encoded as:
+
+```
+-----BEGIN CERTIFICATE-----
+... base 64 encoding of the DER encoded certificate
+    with line endings and padding with equals signs ...
+-----END CERTIFICATE-----
+```
+
+Note that a PEM file may also contain a complete certificate chain, where the chain starts with the leaf / end certificate of the service, followed by the certificate that signed it, usually up to but not including the trusted root certificate. So if you're missing certificates you may want to take a look behind the first one.
+
+##### The .cer or .crt extension
+.cer just stands for certificate. It is normally DER encoded data, but Windows may also accept PEM encoded data. You need to take a look at the content (e.g. using the file utility on posix systems) to see what is within the file to be 100% sure.
 
 

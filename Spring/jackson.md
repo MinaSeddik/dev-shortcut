@@ -1,6 +1,10 @@
 # JSON Jackson Annotations
 
 
+### [Spring integration](#Spring_integration)
+
+## Jackson Annotations:
+
 ##### Jackson Serialization Annotations  
 - [@JsonAnyGetter](#JsonAnyGetter) 
 - [@JsonGetter](#JsonGetter) 
@@ -33,6 +37,153 @@
 - [@JsonFormat](#JsonFormat) 
 - [@JsonUnwrapped](#JsonUnwrapped) 
 
+
+## <a name='Spring_integration'> Spring integration </a>
+
+
+When using JSON format, Spring Boot will use an ObjectMapper instance to serialize responses and deserialize requests.
+
+By default, the Spring Boot configuration will disable the following:
+- MapperFeature.DEFAULT_VIEW_INCLUSION
+- DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
+- SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
+
+```java
+public class Coffee {
+
+    private String name;
+    private String brand;
+    private LocalDateTime date;
+
+   //getters and setters
+
+```
+
+By default, it will be serialized as 
+```json
+{
+  "name": null,
+  "brand": "Lavazza",
+  "date": "2020-11-16T10:21:35.974"
+}
+```
+
+But, We would like to exclude null values and to have a custom date format (dd-MM-yyyy HH:mm). 
+to be like
+```json
+{
+  "brand": "Lavazza",
+  "date": "04-11-2020 10:34"
+}
+```
+
+### Customizing the Default ObjectMapper
+
+#### Application Properties and Custom Jackson Module
+
+The simplest way to configure the mapper is via application properties.
+
+Here's the general structure of the configuration:
+> spring.jackson.<category_name>.<feature_name>=true,false
+
+As an example, here's what we'll add to disable SerializationFeature.WRITE_DATES_AS_TIMESTAMPS:
+```bash
+spring.jackson.serialization.write-dates-as-timestamps=false
+```
+
+also
+```bash
+spring.jackson.default-property-inclusion=always, non_null, non_absent, non_default, non_empty
+```
+
+Check spring-boot documentation
+> **https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto.spring-mvc.customize-jackson-objectmapper**
+
+Configuring the environment variables is the simplest approach. 
+**The downside of this approach is that we can't customize advanced options like having a custom date format for LocalDateTime.**
+
+At this point, we'll obtain this result:
+```json
+{
+  "brand": "Lavazza",
+  "date": "2020-11-16T10:35:34.593"
+}
+```
+
+In order to achieve our goal, we'll register a new JavaTimeModule with our custom date format:
+```java
+@Configuration
+@PropertySource("classpath:coffee.properties")
+public class CoffeeRegisterModuleConfig {
+
+    @Bean
+    public Module javaTimeModule() {
+        JavaTimeModule module = new JavaTimeModule();
+        module.addSerializer(LOCAL_DATETIME_SERIALIZER);
+        return module;
+    }
+}
+```
+
+Spring Boot will automatically register any bean of type com.fasterxml.jackson.databind.Module. Here's our final result:
+```json
+{
+  "brand": "Lavazza",
+  "date": "16-11-2020 10:43"
+}
+```
+
+#### Jackson2ObjectMapperBuilderCustomizer
+
+```java
+@Bean
+public Jackson2ObjectMapperBuilderCustomizer jsonCustomizer() {
+    return builder -> builder.serializationInclusion(JsonInclude.Include.NON_NULL)
+      .serializers(LOCAL_DATETIME_SERIALIZER);
+}
+```
+
+```java
+@Bean
+@Primary
+public ObjectMapper objectMapper() {
+    JavaTimeModule module = new JavaTimeModule();
+    module.addSerializer(LOCAL_DATETIME_SERIALIZER);
+    return new ObjectMapper()
+      .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+      .registerModule(module);
+}
+```
+
+```java
+@Bean
+public Jackson2ObjectMapperBuilder jackson2ObjectMapperBuilder() {
+    return new Jackson2ObjectMapperBuilder().serializers(LOCAL_DATETIME_SERIALIZER)
+      .serializationInclusion(JsonInclude.Include.NON_NULL);
+}
+```
+
+According to the Jackson2ObjectMapperBuilder documentation, it will also register some modules if they're present on the classpath:
+
+- jackson-datatype-jdk8: support for other Java 8 types like Optional
+- jackson-datatype-jsr310: support for Java 8 Date and Time API types
+- jackson-datatype-joda: support for Joda-Time types
+- jackson-module-kotlin: support for Kotlin classes and data classes
+
+
+The advantage of this approach is that the Jackson2ObjectMapperBuilder offers a simple and intuitive way to build an ObjectMapper.
+
+
+#### MappingJackson2HttpMessageConverter
+
+```java
+@Bean
+public MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter() {
+    Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder().serializers(LOCAL_DATETIME_SERIALIZER)
+      .serializationInclusion(JsonInclude.Include.NON_NULL);
+    return new MappingJackson2HttpMessageConverter(builder.build());
+}
+```
 
 
 ## <a name='JsonAnyGetter'> @JsonAnyGetter </a>
