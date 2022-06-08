@@ -5,19 +5,27 @@
 - [@Controller vs @RestController](#controller_restController)   
 - [@EnableWebMvc](#enableWebMvc)
 - [Http Message Converters](#Http_Message_Converters)
-- [Custom Converters Configuration](#custom_onverters_configuration)
+- [Custom HTTP Converters Configuration](#custom_http_converters_configuration)
+- [Converter and GenericConverter](#Converter_GenericConverter)
+- [Custom Argument Resolver](#Custom_Argument_Resolver)
+- [@InitBinder](#InitBinder)
 - [@RequestBody vs @ResponseBody](#requestBody_responseBody)      
-- [@ModelAttribute ](#modelAttribute)    
+- [@ModelAttribute](#modelAttribute)    
 - [@RequestBody vs @ModelAttribute](#requestBody_modelAttribute)    
 - [@GetMapping and @PostMapping with produces and consumes](#getMapping_postMapping)  
 - [@RequestParam vs @PathVariable](#requestParam_pathVariable)      
 - [@ExceptionHandler vs @ControllerAdvice - Spring Error Handling](#exceptionHandler_controllerAdvice)      
 - [GET, POST, PUT, DELETE Best Practices using Spring](#get_post_put_delete)      
 - [Validation](#spring_validation)      
+- [@ContextConfiguration vs @SpringApplicationConfiguration](#ContextConfiguration_SpringApplicationConfiguration)      
 - [Unit test](#unit_test)      
 - [Running Logic on Startup](#Running_Logic_on_Startup)   
 - [@Async and @EnableAsync](#Async_EnableAsync)      
-- [@Scheduled and @EnableScheduling](#Scheduled_EnableScheduling)      
+- [@Scheduled and @EnableScheduling](#Scheduled_EnableScheduling)    
+- [File Download](#File_Download)    
+- [File Upload](#File_Upload)    
+- [Filters](#Filters)    
+- [Filters vs HandlerInterceptors](#Filters_HandlerInterceptors) 
 
 
 ## <a name='spring-web_vs_spring-webmvc'> spring-web vs spring-webmvc </a>
@@ -163,11 +171,11 @@ It will then try to find a registered converter that's capable of handling that 
 The process is similar for receiving a request which contains JSON information. The framework will use the “Content-Type” header to determine the media type of the request body.
 
 
-## <a name='custom_onverters_configuration'> Custom Converters Configuration </a>
+## <a name='custom_http_converters_configuration'> Custom HTTP Converters Configuration </a>
 
 We can also customize the message converters by implementing the WebMvcConfigurer interface and overriding the configureMessageConverters method:
 
-```xml
+```java
 @EnableWebMvc
 @Configuration
 @ComponentScan({ "com.mypackage.web" })
@@ -209,6 +217,398 @@ public HttpMessageConverter<Object> createXmlHttpMessageConverter() {
     return xmlConverter;
 }
 ```
+
+#### Spring Boot Support
+
+If we're using Spring Boot we can avoid implementing the WebMvcConfigurer and adding all the Message Converters manually as we did above.
+
+We can just define different HttpMessageConverter beans in the context, and Spring Boot will add them automatically to the autoconfiguration that it creates:
+
+```java
+@Bean
+public HttpMessageConverter<Object> createXmlHttpMessageConverter() {
+    MarshallingHttpMessageConverter xmlConverter = new MarshallingHttpMessageConverter();
+
+    // ...
+
+    return xmlConverter;
+}
+```
+
+```java
+@Bean
+public HttpMessageConverter<BufferedImage> createImageHttpMessageConverter() {
+    return new BufferedImageHttpMessageConverter();
+}
+```
+
+## <a name='Converter_GenericConverter'> Converter and GenericConverter </a>
+
+Spring provides out-of-the-box various converters for built-in types; this means converting to/from basic types like String, Integer, Boolean and a number of other types.
+
+#### Built-in Converters
+We'll start with the converters available out-of-the-box in Spring; let's have a look at the String to Integer conversion:
+
+```java
+@Autowired
+ConversionService conversionService;
+
+@Test
+public void whenConvertStringToIntegerUsingDefaultConverter_thenSuccess() {
+    assertThat(
+      conversionService.convert("25", Integer.class)).isEqualTo(25);
+}
+```
+
+The only thing we need to do here is to autowire the ConversionService provided by Spring and call the convert() method. 
+
+#### Creating a Custom Converter
+
+```java
+public class Employee {
+
+    private long id;
+    private double salary;
+
+    // standard constructors, getters, setters
+}
+```
+
+The String will be a comma-separated pair representing id and salary. For example, “1,50000.00”.
+
+In order to create our custom Converter, we need to implement the Converter<S, T> interface and implement the convert() method:
+
+```java
+public class StringToEmployeeConverter implements Converter<String, Employee> {
+
+    @Override
+    public Employee convert(String from) {
+        String[] data = from.split(",");
+        return new Employee(Long.parseLong(data[0]), Double.parseDouble(data[1]));
+    }
+}
+```
+
+We're not done yet. We also need to tell Spring about this new converter by adding the StringToEmployeeConverter to the FormatterRegistry. This can be done by implementing the WebMvcConfigurer and overriding addFormatters() method:
+
+```java
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        registry.addConverter(new StringToEmployeeConverter());
+    }
+}
+```
+
+And that's it. Our new Converter is now available to the ConversionService and we can use it in the same way as any other built-in Converter:
+
+```java
+@Test
+public void whenConvertStringToEmployee_thenSuccess() {
+    Employee employee = conversionService
+      .convert("1,50000.00", Employee.class);
+    Employee actualEmployee = new Employee(1, 50000.00);
+    
+    assertThat(conversionService.convert("1,50000.00", 
+      Employee.class))
+      .isEqualToComparingFieldByField(actualEmployee);
+}
+```
+
+#### Implicit Conversion
+
+Beyond these explicit conversion using the ConversionService, **Spring is also capable of implicitly converting values right in Controller methods for all registered converters**:
+
+```java
+@RestController
+public class StringToEmployeeConverterController {
+
+    @GetMapping("/string-to-employee")
+    public ResponseEntity<Object> getStringToEmployee(@RequestParam("employee") Employee employee) {
+        // ...
+        return ResponseEntity.ok(employee);
+    }
+}
+```
+
+```java
+@Test
+public void getStringToEmployeeTest() throws Exception {
+    mockMvc.perform(get("/string-to-employee?employee=1,2000"))
+      .andDo(print())
+      .andExpect(jsonPath("$.id", is(1)))
+      .andExpect(jsonPath("$.salary", is(2000.0)))
+}
+```
+
+#### Creating a ConverterFactory
+
+It's also possible to create a ConverterFactory that creates Converters on demand. This is particularly helpful in creating Converters for Enums.
+
+```java
+public enum Modes {
+    ALPHA, BETA;
+}
+```
+
+Next, let's create a StringToEnumConverterFactory that can generate Converters for converting a String to any Enum:
+
+```java
+@Component
+public class StringToEnumConverterFactory implements ConverterFactory<String, Enum> {
+
+    private static class StringToEnumConverter<T extends Enum> implements Converter<String, T> {
+
+        private Class<T> enumType;
+
+        public StringToEnumConverter(Class<T> enumType) {
+            this.enumType = enumType;
+        }
+
+        @Override
+        public T convert(String source) {
+            return (T) Enum.valueOf(this.enumType, source.trim());
+        }
+    }
+
+    @Override
+    public <T extends Enum> Converter<String, T> getConverter(
+      Class<T> targetType) {
+        return new StringToEnumConverter(targetType);
+    }
+}
+```
+
+As we can see, the factory class internally uses an implementation of Converter interface.
+
+One thing to note here is that although we'll use our Modes Enum to demonstrate the usage, we haven't mentioned the Enum anywhere in the StringToEnumConverterFactory. Our factory class is generic enough to generate the Converters on demand for any Enum type.
+
+**The next step is to register this factory class as we registered our Converter in the previous example:**
+
+```java
+@Override
+public void addFormatters(FormatterRegistry registry) {
+    registry.addConverter(new StringToEmployeeConverter());
+    registry.addConverterFactory(new StringToEnumConverterFactory());
+}
+```
+
+```java
+@Test
+public void whenConvertStringToEnum_thenSuccess() {
+    assertThat(conversionService.convert("ALPHA", Modes.class))
+      .isEqualTo(Modes.ALPHA);
+}
+```
+
+#### Creating a GenericConverter
+
+A GenericConverter provides us more flexibility to create a Converter for a more generic use at the cost of losing some type safety.
+
+Let's consider an example of converting an Integer, Double, or a String to a BigDecimal value.We don't need to write three Converters for this. A simple GenericConverter could serve the purpose.
+ 
+The first step is to tell Spring what types of conversion are supported. We do this by creating a Set of ConvertiblePair:
+
+```java
+public class GenericBigDecimalConverter implements GenericConverter {
+
+    @Override
+    public Set<ConvertiblePair> getConvertibleTypes () {
+    
+        ConvertiblePair[] pairs = new ConvertiblePair[] {
+              new ConvertiblePair(Number.class, BigDecimal.class),
+              new ConvertiblePair(String.class, BigDecimal.class)};
+            return ImmutableSet.copyOf(pairs);
+        }
+}
+```
+
+The next step is to override the convert() method in the same class:
+
+```java
+@Override
+public Object convert (Object source, TypeDescriptor sourceType, 
+  TypeDescriptor targetType) {
+
+    if (sourceType.getType() == BigDecimal.class) {
+        return source;
+    }
+
+    if(sourceType.getType() == String.class) {
+        String number = (String) source;
+        return new BigDecimal(number);
+    } else {
+        Number number = (Number) source;
+        BigDecimal converted = new BigDecimal(number.doubleValue());
+        return converted.setScale(2, BigDecimal.ROUND_HALF_EVEN);
+    }
+}
+```
+
+As you might have already guessed, the next step is to register this Converter:
+
+```java
+@Override
+public void addFormatters(FormatterRegistry registry) {
+    registry.addConverter(new StringToEmployeeConverter());
+    registry.addConverterFactory(new StringToEnumConverterFactory());
+    registry.addConverter(new GenericBigDecimalConverter());
+}
+```
+
+
+```java
+@Test
+public void whenConvertingToBigDecimalUsingGenericConverter_thenSuccess() {
+    assertThat(conversionService
+      .convert(Integer.valueOf(11), BigDecimal.class))
+      .isEqualTo(BigDecimal.valueOf(11.00)
+      .setScale(2, BigDecimal.ROUND_HALF_EVEN));
+    assertThat(conversionService
+      .convert(Double.valueOf(25.23), BigDecimal.class))
+      .isEqualByComparingTo(BigDecimal.valueOf(Double.valueOf(25.23)));
+    assertThat(conversionService.convert("2.32", BigDecimal.class))
+      .isEqualTo(BigDecimal.valueOf(2.32));
+}
+```
+
+## <a name='Custom_Argument_Resolver'> Custom Argument Resolver </a>
+
+There are cases when we want to bind data to objects, but it comes either in a non-direct way (for example, from Session, Header or Cookie variables) or even stored in a data source. In those cases, we need to use a different solution.
+
+we will define an annotation for such parameters:
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.PARAMETER)
+public @interface Version {
+}
+```
+
+we will implement a custom HandlerMethodArgumentResolver:
+
+```java
+public class HeaderVersionArgumentResolver implements HandlerMethodArgumentResolver {
+
+    @Override
+    public boolean supportsParameter(MethodParameter methodParameter) {
+        return methodParameter.getParameterAnnotation(Version.class) != null;
+    }
+
+    @Override
+    public Object resolveArgument(MethodParameter methodParameter, 
+                                  ModelAndViewContainer modelAndViewContainer, 
+                                  NativeWebRequest nativeWebRequest, 
+                                  WebDataBinderFactory webDataBinderFactory) throws Exception {
+ 
+        HttpServletRequest request = (HttpServletRequest) nativeWebRequest.getNativeRequest();
+
+        return request.getHeader("Version");
+    }
+}
+```
+
+letting Spring know where to search for them:
+
+```java
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    //...
+
+    @Override
+    public void addArgumentResolvers(
+      List<HandlerMethodArgumentResolver> argumentResolvers) {
+        argumentResolvers.add(new HeaderVersionArgumentResolver());
+    }
+}
+```
+
+Now we can use it in a controller:
+```java
+@GetMapping("/entity/{id}")
+public ResponseEntity findByVersion(
+  @PathVariable Long id, @Version String version) {
+    return ...;
+}
+```
+
+## <a name='InitBinder'> @InitBinder </a>
+
+#### example (1)
+
+If the user inserts some blank spaces for a particular value and submits the form, the validator block will not treat it as Null as spaces are present, Hence the system will take the value as spaces and the subsequent processing will be done.
+
+```java
+@Initbinder
+public void initBinder(WebDataBinder dataBinder) {
+StringTrimmerEditor stringTrimmerEditor = new StringTrimmerEditor(true);
+dataBinder.registerCustomEditor(String.class, stringTrimmerEditor);
+}
+```
+
+
+#### example (2)
+
+```java
+@InitBinder
+public void initBinder(WebDataBinder binder) {
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+    binder.registerCustomEditor(Date.class, new CustomDateEditor(dateFormat, true));
+}
+```
+
+we can use it in the controller as
+```java
+@GetMapping("/data/value")
+ public void getDate(@RequestParam("date") Date date) {
+
+ }
+```
+
+#### example (3)
+
+##### Problem statement:
+
+
+- In a Spring MVC based web application, all the data which is submitted from the UI comes to the Controller classes where the request is mapped.
+- Sometimes what may happen is request is not reaching the controller methods and in your AJAX calls you may get an HTTP 404 response in your error handling block.
+- Developers try to investigate these sort of issues by putting a debug on the controller method or request interceptors(if you have one) or filters ,check the data which is sent through AJAX,check request mappings etc.
+- But none of the above approaches helps them to resolve the problem because you are getting 404 on the browser and everything else seems to be working fine.
+- Now next step you may try is putting a breakpoint in the DispatcherServlet code as this is the first entry point java class invoked by the Spring framework before executing interceptors/filters and controllers in the chain.
+- Looking at the exception you may figure out that Spring framework is trying to **retrieve more than 255 objects** and hence failing with **IndexOutOfBoundsException**.
+
+**Issue is by default spring only maps only 255 objects to the java bean.**
+
+Spring developers has done this to prevent OutOfMemory problem.
+
+
+##### Solution:
+Use
+> setAutoGrowCollectionLimit (int) 
+
+And you have to be very careful while setting the max size as you may get OutOfMemory issues in your application if you set this value very high.
+
+```java
+@Controller
+public class Controller {
+
+   //Externalize this value
+    @Value("${myApplication.autoGrowCollectionLimit:600}")
+    private int autoGrowCollectionLimit;
+
+
+    @InitBinder
+    public void initBinder(WebDataBinder dataBinder) {
+        dataBinder.setAutoGrowCollectionLimit(autoGrowCollectionLimit);
+    }
+
+}
+```
+
+
 ## <a name='requestBody_responseBody'> @RequestBody vs @ResponseBody </a>
 
 - @RequestBody
@@ -651,6 +1051,20 @@ public class ControllerAdvisor extends ResponseEntityExceptionHandler {
         body.put("errors", errors);
 
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+}
+```
+
+yet another example:
+```java
+@ControllerAdvice
+public class RestResponseEntityExceptionHandler 
+  extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(value = { IllegalArgumentException.class, IllegalStateException.class })
+    protected ResponseEntity<Object> handleConflict(RuntimeException ex, WebRequest request) {
+        String bodyOfResponse = "This should be application specific";
+        return handleExceptionInternal(ex, bodyOfResponse, new HttpHeaders(), HttpStatus.CONFLICT, request);
     }
 }
 ```
@@ -1511,6 +1925,19 @@ public class ApiExceptionHandler {
 ```
 
 
+## <a name='ContextConfiguration_SpringApplicationConfiguration'> @ContextConfiguration vs @SpringApplicationConfiguration </a>
+
+@ContextConfiguration is an annotation from the Spring Test Framework, which is suitable for every Spring application, @SpringApplicationConfiguration is from Spring Boot and is actually a composite annotation, which includes ContextConfiguration with the custom SpringApplicationContextLoader as loader.
+
+Even though both **@ContextConfiguration** and **@SpringApplicationConfiguration** annotations are used along withSpringJUnit4ClassRunner to specify how to **load the Spring application context**
+
+Although @ContextConfiguration does a great job in loading application context it doesn’t take full advantage of Spring Boot features.
+ 
+ Spring Boot applications are ultimately loaded by either SpringApplication ( in case of the JAR) or SpringBootServletInitializer. This class not only loads the application context but also enables logging and loading of external properties specified in application.properties or application.yml file, and other features of Spring Boot framework, which is not loaded or enabled by the 
+ @ContextConfiguration annotation.
+ 
+
+
 ## <a name='unit_test'> Unit test using spring (Complex and I'd rather use spring-boot test) </a>
 
 Every unit test which we write to test the behavior of a controller method consists of these steps:
@@ -1536,15 +1963,15 @@ public class TodoController {
 
 
 ```java
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringRunner.class)
 @ContextConfiguration(classes = {TestContext.class, WebAppContext.class})
+@TestPropertySource("/appTest.properties")
 @WebAppConfiguration
 public class TodoControllerTest {
  
     private MockMvc mockMvc;
  
-//    @Autowired
-    @Mock
+    @Autowired
     private TodoService todoServiceMock;
  
     //Add WebApplicationContext field here
@@ -1601,6 +2028,8 @@ public class TodoControllerTest {
 
 - **@RunWith(SpringJUnit4ClassRunner.class)**: Indicates that the class should use Spring's JUnit facilities.
 - **@ContextConfiguration(locations = {...})**: Indicates which XML files contain the ApplicationContext.
+OR
+- **@ContextConfiguration(classes = {...})**: Indicates which classes contain the ApplicationContext.
 
 If you are using annotations rather than XML files, 
 then any class that you are unit testing that requires Spring dependency injection needs to be put into the **@ContextConfiguration** annotation. For example:
@@ -1619,7 +2048,7 @@ class TodoControllerTest {
 
 
 **TestContext**: Returns all beans, which are required for the test. 
-Use Mockito to mock the depedencies of your controller, because we want to test only the controller and not the service layer.
+Use Mockito to mock the dependencies of your controller, because we want to test only the controller and not the service layer.
 
 
 example:
@@ -1647,7 +2076,7 @@ public class TestContext {
 
 ### Unit test Using spring boot
 ```java
-@RunWith(SpringRunner.class) 
+@RunWith(SpringRunner.class)   // OR @ExtendWith(SpringExtension.class) for Junit 5 
 @WebMvcTest
 @AutoConfigureMockMvc
 public class UserControllerIntegrationTest {
@@ -1656,7 +2085,7 @@ public class UserControllerIntegrationTest {
     private UserRepository userRepository;
     
     @Autowired
-    UserController userController;
+    private UserController userController;
 
     @Autowired
     private MockMvc mockMvc;
@@ -1759,8 +2188,7 @@ The InitializingBean approach works in a similar way. Instead of annotating a me
 @Component
 public class InitializingBeanExampleBean implements InitializingBean {
 
-    private static final Logger LOG 
-      = Logger.getLogger(InitializingBeanExampleBean.class);
+    private static final Logger LOG = Logger.getLogger(InitializingBeanExampleBean.class);
 
     @Autowired
     private Environment environment;
@@ -1774,7 +2202,8 @@ public class InitializingBeanExampleBean implements InitializingBean {
 
 #### An ApplicationListener
 
-We can use this approach for **running logic after the Spring context has been initialized**. So, we aren't focusing on any particular bean. We're instead waiting for all of them to initialize.
+We can use this approach for **running logic after the Spring context has been initialized**. 
+So, we aren't focusing on any particular bean. We're instead waiting for all of them to initialize.
 
 ```java
 @Component
@@ -2066,6 +2495,15 @@ public class SpringAsyncConfig implements AsyncConfigurer {
 }
 ```
 
+#### Using Spring Boot
+
+> spring.task.execution.pool.max-size=16
+> spring.task.execution.pool.queue-capacity=100
+> spring.task.execution.pool.keep-alive=10s
+
+Review the documentation:   
+**https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#features.task-execution-and-scheduling**
+
 
 
 ## <a name='Scheduled_EnableScheduling'> @Scheduled and @EnableScheduling </a>
@@ -2104,8 +2542,6 @@ public void scheduleFixedDelayTask() {
 In this case, the duration between the end of the last execution and the start of the next execution is fixed. The task always waits until the previous one is finished.
 
 This option should be used when it’s mandatory that the previous execution is completed before running again.
-
-
 
 
 
@@ -2206,6 +2642,543 @@ public class MySpringConfig {
 
 #### Using Spring Boot
 
-> spring.task.scheduling.pool.size=5
+> spring.task.scheduling.thread-name-prefix=scheduling-
+>  spring.task.scheduling.pool.size=2
+
+
+Review the documentation:   
+**https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#features.task-execution-and-scheduling**
+
+
+## <a name='File_Download'> File Download </a>
+
+#### Download PDF file with specifing the file name
+
+```java
+@RequestMapping(value = "/files/{file_name}", method = RequestMethod.GET)
+public void getFile(@PathVariable("file_name") String fileName, HttpServletResponse response) {
+    try {
+
+      // get your file as InputStream
+      InputStream is = ...;
+
+    response.setContentType(MediaType.APPLICATION_PDF_VALUE);
+    response.setHeader("Content-Disposition", "attachment; filename=\"somefile.pdf\""); 
+
+      // copy it to response's OutputStream
+      org.apache.commons.io.IOUtils.copy(is, response.getOutputStream());
+      response.flushBuffer();
+
+    
+    } catch (IOException ex) {
+      log.info("Error writing file to output stream. Filename was '{}'", fileName, ex);
+      throw new RuntimeException("IOError writing file to output stream");
+    }
+
+}
+```
+
+#### Download image file
+
+```java
+@GetMapping(
+  value = "/get-image-with-media-type",
+  produces = MediaType.IMAGE_JPEG_VALUE
+)
+public @ResponseBody byte[] getImageWithMediaType() throws IOException {
+    InputStream in = getClass()
+      .getResourceAsStream("/com/baeldung/produceimage/image.jpg");
+    return IOUtils.toByteArray(in);
+}
+```
+
+#### Download text file
+
+```java
+@GetMapping(
+  value = "/get-file",
+  produces = MediaType.APPLICATION_OCTET_STREAM_VALUE
+)
+public @ResponseBody byte[] getFile() throws IOException {
+    InputStream in = getClass()
+      .getResourceAsStream("/com/baeldung/produceimage/data.txt");
+    return IOUtils.toByteArray(in);
+}
+```
+
+
+#### Better example - downloading text file
+
+```java
+@Controller
+public class DemoController {
+
+    @GetMapping(value = "/demo-file-download")
+    public ResponseEntity<byte[]> demo() {                              // (1) Return byte array response
+        String demoContent = "This is dynamically generated content in demo file"; // (2) Dynamic content
+
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE); // (3) Content-Type: application/octet-stream
+        httpHeaders.set(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("demo-file.txt").build().toString()); // (4) Content-Disposition: attachment; filename="demo-file.txt"
+
+        return ResponseEntity.ok().headers(httpHeaders).body(demoContent.getBytes()); // (5) Return Response
+    }
+}
+```
+
+## <a name='File_Upload'> File Upload </a>
+
+#### Uploading a File (Single file)
+Spring allows us to enable this multipart support with pluggable MultipartResolver objects. 
+The framework provides one MultipartResolver implementation for use with **Commons FileUpload** and another for use with **Servlet 3.0** multipart request parsing.
+
+
+To use CommonsMultipartResolver 
+```json
+<dependency>
+    <groupId>commons-fileupload</groupId>
+    <artifactId>commons-fileupload</artifactId>
+    <version>1.4</version>
+</dependency>
+```
+
+Now we can define the CommonsMultipartResolver bean into our Spring configuration.
+
+This MultipartResolver comes with a series of set method to define properties such as the maximum size for uploads:
+
+```java
+@Bean(name = "multipartResolver")
+public CommonsMultipartResolver multipartResolver() {
+    CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
+    multipartResolver.setMaxUploadSize(100000);
+    return multipartResolver;
+}
+```
+
+Suppose we have a multi-form data **multipart/form-data**
+we need to set the encoding attribute of the form to **multipart/form-data**
+```html
+<form:form method="POST" action="/spring-mvc-xml/uploadFile" enctype="multipart/form-data">
+    <table>
+        <tr>
+            <td><form:label path="file">Select a file to upload</form:label></td>
+            <td><input type="file" name="file" /></td>
+        </tr>
+        <tr>
+            <td><input type="submit" value="Submit" /></td>
+        </tr>
+    </table>
+</form>
+```
+
+
+```java
+@RequestMapping(value = "/uploadFile", method = RequestMethod.POST, consumes = {"multipart/form-data"})
+ @ResponseBody 
+ public String uploadFile(@RequestParam("file") MultipartFile file) {
+
+     try {
+         String uploadDir = "/uploads/";
+         String realPath = request.getServletContext().getRealPath(uploadDir);
+        
+         File transferFile = new File(realPath + "/" + file.getOriginalFilename()); 
+         file.transferTo(transferFile);
+    
+     } catch (Exception e) {
+        e.printStackTrace();
+        return "Failure";
+     }
+
+     return "Success";
+ }
+```
+
+
+Notice that **@RequestParam("file")** should match the name field in the input file tag **name="file"**
+```html
+<input type="file" name="file" />
+```
+
+##### yet another example for clarification
+
+```java
+@RequestMapping(method = RequestMethod.POST, consumes = {"multipart/form-data"})
+public String importQuestion(@Valid @RequestParam("uploadedFileName") 
+MultipartFile multipart,  BindingResult result, ModelMap model) {
+   logger.debug("Post method of uploaded Questions ");
+
+    logger.debug("Uploaded file Name : " + multipart.getOriginalFilename());
+   return "importQuestion";
+}
+```
+
+and the input field should look like
+```html
+<input type="file" name="uploadedFileName" id="fileToUpload" required="" >
+```
+
+#### Uploading Multiple Files
+
+To upload multiple files in a single request, we simply put multiple input file fields inside the form:
+```html
+<form:form method="POST" action="/spring-mvc-java/uploadMultiFile" enctype="multipart/form-data">
+    <table>
+        <tr>
+            <td>Select a file to upload</td>
+            <td><input type="file" name="files" /></td>
+        </tr>
+        <tr>
+            <td>Select a file to upload</td>
+            <td><input type="file" name="files" /></td>
+        </tr>
+        <tr>
+            <td>Select a file to upload</td>
+            <td><input type="file" name="files" /></td>
+        </tr>
+        <tr>
+            <td><input type="submit" value="Submit" /></td>
+        </tr>
+    </table>
+</form:form>
+```
+
+We need to take care that **each input field has the same name** so that it can be accessed as an array of MultipartFile:
+
+
+```java
+@RequestMapping(value = "/uploadMultiFile", method = RequestMethod.POST, consumes = {"multipart/form-data"})
+public String submit(@RequestParam("files") MultipartFile[] files, ModelMap modelMap) {
+    modelMap.addAttribute("files", files);
+
+    // we can iterate through files to get the files
+    
+    return "fileUploadView";
+}
+```
+
+#### Uploading Files With Additional Form Data
+
+We can also send additional information to the server along with the file being uploaded. We just have to include the required fields in the form:
+
+```html
+<form:form method="POST" 
+  action="/spring-mvc-java/uploadFileWithAddtionalData" enctype="multipart/form-data">
+    <table>
+        <tr>
+            <td>Name</td>
+            <td><input type="text" name="name" /></td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td><input type="text" name="email" /></td>
+        </tr>
+        <tr>
+            <td>Select a file to upload</td>
+            <td><input type="file" name="file" /></td>
+        </tr>
+        <tr>
+            <td><input type="submit" value="Submit" /></td>
+        </tr>
+    </table>
+</form:form>
+```
+
+Note that Encoding type is **enctype="multipart/form-data"**
+
+In the controller, we can get all the form data using the **@RequestParam** annotation:
+
+```java
+@PostMapping("/uploadFileWithAddtionalData")
+public String submit(@RequestParam MultipartFile file, @RequestParam String name, @RequestParam String email, ModelMap modelMap) {
+
+    modelMap.addAttribute("name", name);
+    modelMap.addAttribute("email", email);
+    modelMap.addAttribute("file", file);
+
+    return "fileUploadView";
+}
+```
+
+
+We can also encapsulate all the form fields in a model class and use @ModelAttribute annotation in the controller. This would be helpful when there's a lot of additional fields along with the file. Let' look at the code:
+
+```java
+public class FormDataWithFile {
+
+    private String name;
+    private String email;
+    private MultipartFile file;
+
+    // standard getters and setters
+}
+```
+
+
+```java
+@PostMapping("/uploadFileModelAttribute")
+public String submit(@ModelAttribute FormDataWithFile formDataWithFile, ModelMap modelMap) {
+
+    modelMap.addAttribute("formDataWithFile", formDataWithFile);
+
+    return "fileUploadView";
+}
+```
+
+also you can add validation with **@Valid**
+```java
+@PostMapping("/uploadFileModelAttribute")
+public String submit(@Valid @ModelAttribute FormDataWithFile formDataWithFile, ModelMap modelMap) {
+
+    modelMap.addAttribute("formDataWithFile", formDataWithFile);
+    return "fileUploadView";
+}
+```
+
+
+#### Spring Boot File Upload 
+
+If we're using Spring Boot, everything we've seen so far still applies.  
+However, Spring Boot makes it even easier to configure
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+    <version>2.6.1</version>
+</dependency>
+```
+
+If we want to control the maximum file upload size, we can edit our **application.properties**:
+```bash
+spring.servlet.multipart.max-file-size=128KB
+spring.servlet.multipart.max-request-size=128KB
+```
+
+We can also control whether file uploading is enabled, and the location for file upload:
+```bash
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.location=${java.io.tmpdir}
+```
+
+Note that we've used ${java.io.tmpdir} to define the upload location so that we can use the temporary location for different operating systems.
+
+
+## <a name='Filters'> Filters </a>
+
+
+**Filter is not a spring bean(it is a web component) the injections won't work inside them. Springs wont inject inside web component.**
+
+**Incorrect Filter, Injection will not work**
+```java
+public class MyFilter implements Filter {
+
+    @Autowired
+    InjectedBean someInjectedBean;
+}
+```
+
+We can create filters using one of the following methods
+1. Servlet Filter **(implements Filter)**
+2. Spring Filter  **(implements org.springframework.web.filter.DelegatingFilterProxy)**  
+
+#### Servlet Filter implementation 
+```java
+// Implements Filter class
+public class LogFilter implements Filter  {
+
+    @Override
+    public void  init(FilterConfig config) throws ServletException {
+      
+      // Get init parameter 
+      String testParam = config.getInitParameter("test-param"); 
+    
+      //Print the init parameter 
+      System.out.println("Test Param: " + testParam); 
+    }
+   
+   @Override
+   public void  doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
+
+      // Get the IP address of client machine.
+      String ipAddress = request.getRemoteAddr();
+
+      // Log the IP address and current timestamp.
+      System.out.println("IP "+ ipAddress + ", Time " + new Date().toString());
+
+      // Pass request back down the filter chain
+      chain.doFilter(request,response);
+   }
+
+   @Override 
+   public void destroy( ) {
+      /* Called before the Filter instance is removed from service by the web container*/
+   }
+
+}
+```
+
+in **web.xml**
+```xml
+<filter>
+   <filter-name>LogFilter</filter-name>
+   <filter-class>LogFilter</filter-class>   <!-- full qualifiedClass name exL com.certifx.cd.LogFilter -->
+   <init-param>
+      <param-name>test-param</param-name>
+      <param-value>Initialization Parameter</param-value>
+   </init-param>
+</filter>
+
+<filter-mapping>
+   <filter-name>LogFilter</filter-name>
+   <url-pattern>/*</url-pattern>
+</filter-mapping>
+```
+
+
+#### Using Multiple Servlet Filters
+
+Your web application may define several different filters with a specific purpose. Consider, you define two filters AuthenFilter and LogFilter. Rest of the process would remain as explained above except you need to create a different mapping as mentioned below
+
+```xml
+<filter>
+   <filter-name>LogFilter</filter-name>
+   <filter-class>LogFilter</filter-class>
+   <init-param>
+      <param-name>test-param</param-name>
+      <param-value>Initialization Paramter</param-value>
+   </init-param>
+</filter>
+
+<filter>
+   <filter-name>AuthenFilter</filter-name>
+   <filter-class>AuthenFilter</filter-class>
+   <init-param>
+      <param-name>test-param</param-name>
+      <param-value>Initialization Paramter</param-value>
+   </init-param>
+</filter>
+
+<filter-mapping>
+   <filter-name>LogFilter</filter-name>
+   <url-pattern>/*</url-pattern>
+</filter-mapping>
+
+<filter-mapping>
+   <filter-name>AuthenFilter</filter-name>
+   <url-pattern>/*</url-pattern>
+</filter-mapping>
+```
+
+
+The **order of filter-mapping elements in web.xml determines the order in which the web container applies the filter** to the servlet.    
+For example, above example would apply LogFilter first and then it would apply AuthenFilter to any servlet
+
+
+#### Spring Filter implementation 
+
+using DelegatingFilterProxy
+
+When using servlet filters, you obviously need to declare them in your web.xml, or they will be ignored by the servlet container. In Spring Security, the filter classes are also Spring beans defined in the application context and thus able to take advantage of Spring's rich dependency-injection facilities and lifecycle interfaces. Spring's DelegatingFilterProxy provides the link between web.xml and the application context.
+
+When using DelegatingFilterProxy, you will see something like this in the **web.xml** file:
+
+```xml
+  <filter>
+    <filter-name>myFilter</filter-name>
+    <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+  </filter>
+
+  <filter-mapping>
+    <filter-name>myFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+```
+
+
+##### Spring Filter example
+
+```java
+public class MyFilter extends GenericFilterBean {
+
+    @Autowired
+    InjectedBean someInjectedBean;
+ 
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        
+        // ... 
+
+        chain.doFilter(request, response);
+    }
+}
+```
+
+Note that you can inject beans like **someInjectedBean** 
+
+and in **web.xml**
+```xml
+<filter>
+  <filter-name>myFilter</filter-name>
+  <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+  <init-param>
+    <param-name>targetBeanName</param-name>
+    <param-value>myFilterBean</param-value>
+  </init-param>
+</filter>
+
+<filter-mapping>
+  <filter-name>myFilter</filter-name>
+  <url-pattern>/myFilterPattern/*</url-pattern>
+</filter-mapping>
+```
+
+
+## <a name='Filters_HandlerInterceptors'> Filters vs HandlerInterceptors </a>
+
+![Filters vs. HandlerInterceptors](./filters_vs_interceptors.jpg)
+
+#### Filters
+- Filters are part of the webserver and not the Spring framework. For incoming requests, we can use filters to manipulate and even block requests from reaching any servlet. Vice versa, we can also block responses from reaching the client.
+- Spring Security is a great example of using filters for authentication and authorization. To configure Spring Security, we simply need to add a single filter, the **DelegatingFilterProxy**. Spring Security can then intercept all incoming and outgoing traffic. This is why Spring Security can be used outside of Spring MVC.
+
+#### HandlerInterceptors
+- HandlerInterceptors are part of the Spring MVC framework and sit between the DispatcherServlet and our Controllers. We can intercept requests before they reach our controllers, and before and after the view is rendered.
+
+##### Creating a HandlerInterceptor
+To create a HandlerInterceptor, we create a class that implements the org.springframework.web.servlet.HandlerInterceptor interface. This gives us the option to override three methods:
+
+- **preHandle()** – Executed before the target handler is called
+- **postHandle()** – Executed after the target handler but before the DispatcherServlet renders the view
+- **afterCompletion()** – Callback after completion of request processing and view rendering
+
+```java
+public class LogInterceptor implements HandlerInterceptor {
+
+    private Logger logger = LoggerFactory.getLogger(LogInterceptor.class);
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        logger.info("preHandle");
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        logger.info("postHandle");
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        logger.info("afterCompletion");
+    }
+
+}
+```
+
+
+
+
+
+
 
 

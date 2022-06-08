@@ -61,7 +61,7 @@ cache = Caffeine.newBuilder().expireAfter(new Expiry<Key, Value>() {
 
 **https://github.com/ben-manes/caffeine/wiki**
 
-
+It is very important to revisit **https://github.com/google/guava/wiki/CachesExplained**
 ## <a name='spring_integration_no_annotation'> spring integration (without annotation) </a>
 
 ```java

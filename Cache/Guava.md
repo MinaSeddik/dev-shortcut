@@ -38,6 +38,8 @@ LoadingCache<Key, Value> cache = CacheBuilder.newBuilder()
            });
 ```
 
+The canonical way to query a LoadingCache is with the method get(K). This will either return an already cached value, or else use the cache's CacheLoader to atomically load a new value into the cache.
+
 
 ## <a name='Documentation'> Documentation </a>
 

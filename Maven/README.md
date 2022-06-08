@@ -11,6 +11,7 @@
 - [&lt;dependencyManagement&gt; vs &lt;dependencies&gt; tags](#dependencv_mngmt)
 - [Change version from snapshot to release](#change_version)
 - [Java web application project structure](#project_structure)
+- [Maven Wrapper](#Maven_Wrapper)
 
 
 
@@ -575,3 +576,51 @@ project
 │   README.md
 │   CHANGELOG.md
 ```
+
+
+
+## <a name='Maven_Wrapper'> Maven Wrapper </a>
+
+Instead of installing many versions of it in the operating system, we can just use the project-specific wrapper script.
+
+
+- **mvnw**: it's an executable Unix shell script used in place of a fully installed Maven
+- **mvnw.cmd**: it's the Batch version of the above script
+- **.mvn**: the hidden folder that holds the Maven Wrapper Java library and its properties file
+
+
+```bash
+./mvnw clean install
+```
+
+If we don't have the specified Maven in the wrapper properties, it'll be downloaded and installed in the folder $USER_HOME/.m2/wrapper/dists of the system.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
