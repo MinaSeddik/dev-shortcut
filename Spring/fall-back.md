@@ -1,26 +1,17 @@
 
 
 @EnableWebMvc  ... done
-
-
-
-@EnableCaching
-https://www.baeldung.com/spring-cache-tutorial
-
-
-@EnableScheduling
-@EnableAsync
-... done 
-
-
+@EnableCaching  ... done
+@EnableScheduling  ... done
+@EnableAsync  ... done
 
 
 @EnableWebSocket
 
 
 
+## spring-data
 
-
-@EnableJpaRepositories
-@EnableTransactionManagement
-@EnableJpaAuditing
+- @EnableJpaRepositories
+- @EnableTransactionManagement
+- @EnableJpaAuditing

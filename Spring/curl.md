@@ -27,6 +27,8 @@
 - [Cookies](#Cookies)
 - [Config File](#Config_File)
 - [Network Interface](#Network_Interface)
+- [JSON pretty-print using **jq**](#JSON_pretty_print_jq)
+
 
 
 
@@ -390,5 +392,56 @@ curl --interface 192.168.1.10 http://www.example.com/
 ```
 
 
+## <a name='JSON_pretty_print_jq'> JSON pretty-print using jq </a>
 
+it can be helpful to pipe the response through jq to pretty-print it. The simplest jq program is the expression ., which takes the input and produces it unchanged as output.
+
+```bash
+curl 'https://api.github.com/repos/stedolan/jq/commits?per_page=5' | jq '.'
+```
+
+```bash
+curl 'https://api.github.com/repos/stedolan/jq/commits?per_page=5' | jq 
+```
+
+#### Installation on Ubuntu
+
+It is possible to perform sudo apt-get install jq however you need to inform the system where to find jq
+
+step (1): Open your sources file in a text editor:
+```bash
+sudo vim /etc/apt/sources.list
+```
+
+step (2): Add the following line to the end of that file
+```bash
+deb http://us.archive.ubuntu.com/ubuntu vivid main universe
+```
+
+Note:   
+**vivid** is Ubuntu 15.04 distribution code name
+
+- Use **focal** for Ubuntu 20.04 LTS distribution code name
+```bash
+deb http://us.archive.ubuntu.com/ubuntu vivid main universe
+```
+OR set the ubuntu version name according to your running operating system
+
+To get Ubuntu distribution code name  
+You can just source (the source command is a dot `.`) the `/etc/os-release` and you'll have access to all the variables defined there:
+```bash
+$ . /etc/os-release
+$ echo "$VERSION"
+14.04, Trusty Tahr
+```
+ 
+step (3): Then re-index apt-get so that it can find jq:
+```bash
+sudo apt-get update
+```
+
+step (4): Then do the normal install and you should be the proud new user of jq!
+```bash
+ sudo apt-get install jq
+```
 

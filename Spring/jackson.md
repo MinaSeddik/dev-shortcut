@@ -37,6 +37,10 @@
 - [@JsonFormat](#JsonFormat) 
 - [@JsonUnwrapped](#JsonUnwrapped) 
 
+ ##### Jackson Property Inclusion Annotations  (spring-boot)
+- [@JsonComponent](#JsonComponent) 
+
+
 
 ## <a name='Spring_integration'> Spring integration </a>
 
@@ -996,6 +1000,187 @@ public void whenSerializingUsingJsonUnwrapped_thenCorrect() throws JsonProcessin
     "lastName":"Doe"
 }
 ```
+
+
+## <a name='JsonComponent'> @JsonComponent </a>
+
+
+The annotation allows us to expose an annotated class to be a Jackson serializer and/or deserializer without the need to add it to the ObjectMapper manually.
+
+This is part of the core Spring Boot module, so there are no additional dependencies required in a plain Spring Boot application.
+
+#### Serialization
+
+```java
+public class User {
+    private Color favoriteColor;
+
+    // standard getters/constructors
+}
+```
+
+If we serialize this object using Jackson with default settings we get:
+```json
+{
+  "favoriteColor": {
+    "red": 0.9411764740943909,
+    "green": 0.9725490212440491,
+    "blue": 1.0,
+    "opacity": 1.0,
+    "opaque": true,
+    "hue": 208.00000000000003,
+    "saturation": 0.05882352590560913,
+    "brightness": 1.0
+  }
+}
+```
+
+
+We can make the JSON a lot more condensed and readable by just printing the RGB values – for example, to be used in CSS.
+
+To this extent, we just have to create a class that implements JsonSerializer:
+```java
+@JsonComponent
+public class UserJsonSerializer extends JsonSerializer<User> {
+
+    @Override
+    public void serialize(User user, JsonGenerator jsonGenerator, 
+      SerializerProvider serializerProvider) throws IOException, 
+      JsonProcessingException {
+ 
+        jsonGenerator.writeStartObject();
+        jsonGenerator.writeStringField(
+          "favoriteColor", 
+          getColorAsWebColor(user.getFavoriteColor()));
+        jsonGenerator.writeEndObject();
+    }
+
+    private static String getColorAsWebColor(Color color) {
+        int r = (int) Math.round(color.getRed() * 255.0);
+        int g = (int) Math.round(color.getGreen() * 255.0);
+        int b = (int) Math.round(color.getBlue() * 255.0);
+        return String.format("#%02x%02x%02x", r, g, b);
+    }
+}
+```
+
+With this serializer, the resulting JSON has been reduced to:
+```json
+{"favoriteColor":"#f0f8ff"}
+```
+
+Due to the @JsonComponent annotation, the serializer is registered in the Jackson ObjectMapper in the Spring Boot application. We can test this with the following JUnit test:
+
+```java
+@JsonTest
+@RunWith(SpringRunner.class)
+public class UserJsonSerializerTest {
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    public void testSerialization() throws JsonProcessingException {
+        User user = new User(Color.ALICEBLUE);
+        String json = objectMapper.writeValueAsString(user);
+ 
+        assertEquals("{\"favoriteColor\":\"#f0f8ff\"}", json);
+    }
+}
+```
+
+
+#### Deserialization
+
+we can write a deserializer that will turn the web color String into a JavaFX Color object:
+
+```java
+@JsonComponent
+public class UserJsonDeserializer extends JsonDeserializer<User> {
+ 
+    @Override
+    public User deserialize(JsonParser jsonParser, 
+      DeserializationContext deserializationContext) throws IOException, 
+      JsonProcessingException {
+ 
+        TreeNode treeNode = jsonParser.getCodec().readTree(jsonParser);
+        TextNode favoriteColor
+          = (TextNode) treeNode.get("favoriteColor");
+        return new User(Color.web(favoriteColor.asText()));
+    }
+}
+```
+
+Let's test the new deserializer and make sure everything works as expected:
+```java
+@JsonTest
+@RunWith(SpringRunner.class)
+public class UserJsonDeserializerTest {
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    public void testDeserialize() throws IOException {
+        String json = "{\"favoriteColor\":\"#f0f8ff\"}";
+        User user = objectMapper.readValue(json, User.class);
+ 
+        assertEquals(Color.ALICEBLUE, user.getFavoriteColor());
+    }
+}
+```
+
+
+#### Serializer and Deserializer in One Class
+
+```java
+@JsonComponent
+public class UserCombinedSerializer {
+ 
+    public static class UserJsonSerializer 
+      extends JsonSerializer<User> {
+
+        @Override
+        public void serialize(User user, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
+ 
+            jsonGenerator.writeStartObject();
+            jsonGenerator.writeStringField("favoriteColor", getColorAsWebColor(user.getFavoriteColor()));
+            jsonGenerator.writeEndObject();
+        }
+
+        private static String getColorAsWebColor(Color color) {
+            int r = (int) Math.round(color.getRed() * 255.0);
+            int g = (int) Math.round(color.getGreen() * 255.0);
+            int b = (int) Math.round(color.getBlue() * 255.0);
+            return String.format("#%02x%02x%02x", r, g, b);
+        }
+    }
+
+    public static class UserJsonDeserializer extends JsonDeserializer<User> {
+ 
+        @Override
+        public User deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+ 
+            TreeNode treeNode = jsonParser.getCodec().readTree(jsonParser);
+            TextNode favoriteColor = (TextNode) treeNode.get("favoriteColor");
+            return new User(Color.web(favoriteColor.asText()));
+        }
+    }
+
+
+
+}
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
