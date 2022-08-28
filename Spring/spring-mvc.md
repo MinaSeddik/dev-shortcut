@@ -1600,6 +1600,8 @@ public class TodoControllerTest {
 ```
 
 - **@RunWith(SpringJUnit4ClassRunner.class)**: Indicates that the class should use Spring's JUnit facilities.
+  - @RunWith(SpringJUnit4ClassRunner.class) : You need this annotation to just enable spring boot features like @Autowire, @MockBean etc.. during junit testing
+
 - **@ContextConfiguration(locations = {...})**: Indicates which XML files contain the ApplicationContext.
 
 If you are using annotations rather than XML files, 
