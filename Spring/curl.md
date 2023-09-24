@@ -20,6 +20,7 @@
 
 ##### MISC
 - [HTTPS Certificate](#HTTPS)
+- [HTTP 2 Support](#HTTP2_Support)
 - [FTP Connection](#FTP_connection)
 - [Download to a File](#Download_File)
 - [Ranges](#Ranges)
@@ -272,6 +273,28 @@ curl --cacert my-ca.crt https://whatever.com/script.php
 
 to use a real certificate of the tested website with curl, checkout
 http://javamemento.blogspot.com/2015/10/using-curl-with-ssl-cert-chain.html
+
+
+### <a name='HTTP2_Support'> HTTP 2 Support </a>
+
+```sh
+# HTTP/2 supported:
+curl -sI https://curl.se -o/dev/null -w '%{http_version}\n'
+2
+
+# HTTP/2 not supported (instead serving 1.1 in this case):
+curl -sI http://curl.se -o/dev/null -w '%{http_version}\n'
+1.1
+
+
+# Since curl 7.88.1, if you build curl to support HTTP/3, the above one-liner can be extended to also check for HTTP/3 support like this:
+curl -sI --http3 https://curl.se -o/dev/null -w '%{http_version}\n'
+3
+```
+
+
+
+
 
 
 ### <a name='FTP_connection'> FTP Connection </a>
