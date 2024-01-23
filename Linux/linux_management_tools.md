@@ -40,6 +40,20 @@ du -ah /home/mina   # all files and directories
 du -sh /home/mina
 ```
 
+Fo input/output state
+```
+iostat
+iostat sda      # sda is the device name
+iostat -d sda sdb 2   # Monitor I/O statistics for specific devices (e.g., sda and sdb) every 2 seconds
+iostat sda sdb 5 10   # Monitor I/O statistics for specific devices (e.g., sda and sdb) every 5 seconds for a total of 10 updates
+iostat -c  # Display only CPU-related statistics
+iostat -t  # Display I/O statistics for all devices and include a timestamp for each report
+
+
+
+```
+
+
 ## <a name='memory_tools'> Memory Management commands </a>
 
 ```
